@@ -1,0 +1,30 @@
+#!/usr/local/bin/php
+<?php
+
+require_once("config.inc");
+require_once("interfaces.inc");
+require_once("util.inc");
+
+$subsystem = !empty($argv[1]) ? $argv[1] : '';
+$type = !empty($argv[2]) ? $argv[2] : '';
+
+if ($type != 'MASTER' && $type != 'BACKUP') {
+    log_error("Carp '$type' event unknown from source '{$subsystem}'");
+    exit(1);
+}
+
+if (!strstr($subsystem, '@')) {
+    log_error("Carp '$type' event triggered from wrong source '{$subsystem}'");
+    exit(1);
+}
+
+$ifkey = 'wan';
+
+if ($type === "MASTER") {
+    log_error("enable interface '$ifkey' due CARP event '$type'");
+    # TODO: start dhcpcd
+} else {
+    log_error("disable interface '$ifkey' due CARP event '$type'");
+    # TODO: stop dhcpcd
+}
+
