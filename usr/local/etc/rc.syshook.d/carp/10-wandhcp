@@ -18,13 +18,13 @@ if (!strstr($subsystem, '@')) {
     exit(1);
 }
 
-$ifkey = 'wan';
+$ifkey = get_real_interface();
 
 if ($type === "MASTER") {
-    log_error("enable interface '$ifkey' due CARP event '$type'");
-    # TODO: start dhcpcd
+    log_error("start dhcpcd on interface '$ifkey' due to CARP event '$type'");
+    exec("dhcpcd -A --noconfigure " . $ifkey);
 } else {
-    log_error("disable interface '$ifkey' due CARP event '$type'");
-    # TODO: stop dhcpcd
+    log_error("stop dhcpcd on interface '$ifkey' due to CARP event '$type'");
+    exec("dhcpcd -k " . $ifkey);
 }
 
