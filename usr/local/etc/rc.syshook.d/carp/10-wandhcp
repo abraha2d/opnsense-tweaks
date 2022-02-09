@@ -18,13 +18,18 @@ if (!strstr($subsystem, '@')) {
     exit(1);
 }
 
+list ($vhid, $iface) = explode('@', $subsystem);
 $ifkey = get_real_interface();
 
+if ($iface != $ifkey) {
+    exit(0);
+}
+
 if ($type === "MASTER") {
-    log_error("start dhcpcd on interface '$ifkey' due to CARP event '$type'");
-    exec("dhcpcd -A --noconfigure " . $ifkey);
+   log_error("start dhcpcd on interface '$iface' due to CARP event '$type'");
+    exec("dhcpcd -A --noconfigure " . $iface);
 } else {
-    log_error("stop dhcpcd on interface '$ifkey' due to CARP event '$type'");
-    exec("dhcpcd -k " . $ifkey);
+    log_error("stop dhcpcd on interface '$iface' due to CARP event '$type'");
+    exec("dhcpcd -k " . $iface);
 }
 
