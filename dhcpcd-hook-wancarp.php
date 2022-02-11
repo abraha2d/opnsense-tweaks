@@ -30,7 +30,6 @@ if ($a_vip[$vid]['subnet'] == $new_ip_address && $a_vip[$vid]['subnet_bits'] == 
 $a_out = &config_read_array('nat', 'outbound', 'rule');
 $oid = array_search($subnet, array_column($a_out, 'targetip'));
 $a_out[$oid]['targetip'] = $new_ip_address;
-$a_out[$oid]['targetip_subnet'] = $new_subnet_cidr;
 $a_out[$oid]['updated'] = make_config_revision_entry();
 
 # De-configure the CARP virtual IP
