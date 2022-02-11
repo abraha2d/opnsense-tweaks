@@ -33,17 +33,17 @@ $a_out[$oid]['targetip'] = $new_ip_address;
 $a_out[$oid]['updated'] = make_config_revision_entry();
 
 # De-configure the CARP virtual IP
-log_error("De-configuring $a_vip[$vid]['interface']");
+log_error("Bringing WAN CARP down");
 interface_vip_bring_down($a_vip[$vid]);
 
 # Update the CARP config
-log_error("Updating '$a_vip[$vid]['interface']' config to $new_ip_address/$new_subnet_cidr");
+log_error("Setting WAN CARP IP address to $new_ip_address/$new_subnet_cidr");
 $a_vip[$vid]['subnet'] = $new_ip_address;
 $a_vip[$vid]['subnet_bits'] = $new_subnet_cidr;
 write_config();
 
 # Re-configure the CARP virtual IP
-log_error("Re-configuring $a_vip[$vid]['interface']");
+log_error("Re-configuring WAN CARP");
 interface_carp_configure($a_vip[$vid]);
 filter_configure();
 
