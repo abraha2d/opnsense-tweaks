@@ -32,8 +32,12 @@ if ($type === "MASTER") {
     log_error("Running 'ifconfig $iface ether $mac'");
     exec("ifconfig $iface ether $mac");
 
-    log_error("Running 'dhcpcd -M --noconfigure $iface'");
-    exec("dhcpcd -M --noconfigure $iface");
+    $a_vip = &config_read_array('virtualip', 'vip');
+    $vid = array_search('wan', array_column($a_vip, 'interface'));
+    $subnet = $a_vip[$vid]['subnet'];
+
+    log_error("Running 'dhcpcd -M --noconfigure $iface -r $subnet'");
+    exec("dhcpcd -M --noconfigure $iface -r $subnet");
 } else {
     log_error("stop dhcpcd on interface '$iface' due to CARP event '$type'");
 
