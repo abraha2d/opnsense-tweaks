@@ -45,7 +45,7 @@ if ($type === "MASTER") {
     exec("killall dhcpcd");
 
     if (!empty(shell_exec("ifconfig $iface | grep hwaddr"))) {
-        $mac = shell_exec("ifconfig $iface | grep hwaddr | cut -d' ' -f2");
+        $mac = rtrim(shell_exec("ifconfig $iface | grep hwaddr | cut -d' ' -f2"));
         log_error("Running 'ifconfig $iface ether $mac'");
         exec("ifconfig $iface ether $mac");
     }

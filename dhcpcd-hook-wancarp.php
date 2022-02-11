@@ -19,7 +19,7 @@ if (empty($new_ip_address) || empty($new_subnet_cidr)) {
 # Find existing CARP config
 $a_vip = &config_read_array('virtualip', 'vip');
 $vid = array_search('wan', array_column($a_vip, 'interface'));
-$subnet = $a_vip[$vid]['subnet']
+$subnet = $a_vip[$vid]['subnet'];
 
 # Don't do anything if the new lease matches the existing config
 if ($a_vip[$vid]['subnet'] == $new_ip_address && $a_vip[$vid]['subnet_bits'] == $new_subnet_cidr) {
