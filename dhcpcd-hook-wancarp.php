@@ -19,6 +19,7 @@ if (empty($new_ip_address) || empty($new_subnet_cidr)) {
 # Find existing CARP config
 $a_vip = &config_read_array('virtualip', 'vip');
 $vid = array_search('wan', array_column($a_vip, 'interface'));
+log_error("Found WAN CARP at index $vid");
 $subnet = $a_vip[$vid]['subnet'];
 
 # Don't do anything if the new lease matches the existing config
@@ -28,16 +29,16 @@ if ($a_vip[$vid]['subnet'] == $new_ip_address && $a_vip[$vid]['subnet_bits'] == 
 
 # Update existing NAT outbound rule
 $a_out = &config_read_array('nat', 'outbound', 'rule');
-$oid = array_search($subnet, array_column($a_out, 'targetip'));
-$a_out[$oid]['targetip'] = $new_ip_address;
-$a_out[$oid]['updated'] = make_config_revision_entry();
+$oid = array_search($subnet, array_column($a_out, 'target'));
+log_error("Updating outbound NAT rule $oid to $new_ip_address");
+$a_out[$oid]['target'] = $new_ip_address;
 
 # De-configure the CARP virtual IP
 log_error("Bringing WAN CARP down");
 interface_vip_bring_down($a_vip[$vid]);
 
 # Update the CARP config
-log_error("Setting WAN CARP IP address to $new_ip_address/$new_subnet_cidr");
+log_error("Updating WAN CARP IP address to $new_ip_address/$new_subnet_cidr");
 $a_vip[$vid]['subnet'] = $new_ip_address;
 $a_vip[$vid]['subnet_bits'] = $new_subnet_cidr;
 write_config();
