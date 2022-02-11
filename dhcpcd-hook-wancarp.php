@@ -3,16 +3,19 @@
 
 require_once('config.inc');
 require_once('filter.inc');
-require_once('legacy_bindings.inc');
 require_once('interfaces.inc');
+require_once('legacy_bindings.inc');
+require_once('plugins.inc');
+require_once('system.inc');
 require_once('util.inc');
 
 # Get info from dhcpcd
 $new_ip_address = getenv('new_ip_address');
 $new_subnet_cidr = getenv('new_subnet_cidr');
+$new_routers = getenv('new_routers');
 
 # Die if we don't have the necessary info
-if (empty($new_ip_address) || empty($new_subnet_cidr)) {
+if (empty($new_ip_address) || empty($new_subnet_cidr) || empty($new_routers)) {
   exit(1);
 }
 
@@ -26,6 +29,12 @@ $subnet = $a_vip[$vid]['subnet'];
 if ($a_vip[$vid]['subnet'] == $new_ip_address && $a_vip[$vid]['subnet_bits'] == $new_subnet_cidr) {
   exit(0);
 }
+
+# Update existing gateway
+$a_gateway_item = &config_read_array('gateways', 'gateway_item');
+$gid = array_search('wan', array_column($a_gateway_item, 'interface'));
+log_error("Updating gateway $gid to $new_routers");
+$a_gateway_item[$gid]['gateway'] = $new_routers;
 
 # Update existing NAT outbound rule
 $a_out = &config_read_array('nat', 'outbound', 'rule');
@@ -46,6 +55,8 @@ write_config();
 # Re-configure the CARP virtual IP
 log_error("Re-configuring WAN CARP");
 interface_carp_configure($a_vip[$vid]);
+system_routing_configure();
+plugins_configure('monitor');
 filter_configure();
 
 # Synchronize config to backup
