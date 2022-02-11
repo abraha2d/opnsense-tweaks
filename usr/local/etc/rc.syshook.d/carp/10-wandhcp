@@ -25,12 +25,13 @@ if ($iface != $ifkey) {
     exit(0);
 }
 
-$mac = sprintf('56:48:46:77:63:%02x', $vhid);
-
 if ($type === "MASTER") {
     log_error("start dhcpcd on interface '$iface' due to CARP event '$type'");
+
+    $mac = sprintf('56:48:46:77:63:%02x', $vhid);
     log_error("Running 'ifconfig $iface ether $mac'");
     exec("ifconfig $iface ether $mac");
+
     log_error("Running 'dhcpcd -M --noconfigure $iface'");
     exec("dhcpcd -M --noconfigure $iface");
 } else {
@@ -40,8 +41,9 @@ if ($type === "MASTER") {
     exec("killall dhcpcd");
 
     if (!empty(shell_exec("ifconfig $iface | grep hwaddr"))) {
-        log_error("Running 'ifconfig $iface ether \$(ifconfig $iface | grep hwaddr | cut -d' ' -f2)'");
-        exec("ifconfig $iface ether \$(ifconfig $iface | grep hwaddr | cut -d' ' -f2)");
+        $mac = shell_exec("ifconfig $iface | grep hwaddr | cut -d' ' -f2");
+        log_error("Running 'ifconfig $iface ether $mac'");
+        exec("ifconfig $iface ether $mac");
     }
 }
 
