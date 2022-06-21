@@ -38,9 +38,11 @@ $a_gateway_item[$gid]['gateway'] = $new_routers;
 
 # Update existing NAT outbound rule
 $a_out = &config_read_array('nat', 'outbound', 'rule');
-$oid = array_search($subnet, array_column($a_out, 'target'));
-log_error("Updating outbound NAT rule $oid to $new_ip_address");
-$a_out[$oid]['target'] = $new_ip_address;
+$oids = array_keys(array_column($a_out, 'target'), $subnet);
+foreach ($oids as $oid) {
+  log_error("Updating outbound NAT rule $oid to $new_ip_address");
+  $a_out[$oid]['target'] = $new_ip_address;
+}
 
 # De-configure the CARP virtual IP
 log_error("Bringing WAN CARP down");
