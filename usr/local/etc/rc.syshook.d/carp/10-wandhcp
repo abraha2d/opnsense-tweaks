@@ -28,11 +28,7 @@ if ($iface != $if_wan && $iface != $if_opt5) {
 }
 
 # Translate interface name
-$a_ifs = config_read_array('interfaces');
-$if = array_keys(array_filter($a_ifs, function ($if_data) {
-  global $iface;
-  return $if_data['if'] == $iface;
-}))[0];
+$ifname = convert_real_interface_to_friendly_interface_name($iface)
 
 if ($type === "MASTER") {
     log_error("start dhcpcd on interface '$iface' due to CARP event '$type'");
@@ -42,7 +38,7 @@ if ($type === "MASTER") {
     exec("ifconfig $iface ether $mac");
 
     $a_vip = &config_read_array('virtualip', 'vip');
-    $vid = array_search($if, array_column($a_vip, 'interface'));
+    $vid = array_search($ifname, array_column($a_vip, 'interface'));
     $subnet = $a_vip[$vid]['subnet'];
 
     log_error("Running 'dhcpcd -M --noconfigure $iface -r $subnet'");

@@ -21,16 +21,12 @@ if (empty($interface) || empty($new_ip_address) || empty($new_subnet_cidr) || em
 }
 
 # Translate interface name
-$a_ifs = config_read_array('interfaces');
-$if = array_keys(array_filter($a_ifs, function ($if_data) {
-  global $interface;
-  return $if_data['if'] == $interface;
-}))[0];
+$ifname = convert_real_interface_to_friendly_interface_name($interface);
 
 # Find existing CARP config
 $a_vip = &config_read_array('virtualip', 'vip');
-$vid = array_search($if, array_column($a_vip, 'interface'));
-log_error("Found $if CARP at index $vid");
+$vid = array_search($ifname, array_column($a_vip, 'interface'));
+log_error("Found $ifname CARP at index $vid");
 $subnet = $a_vip[$vid]['subnet'];
 
 # Don't do anything if the new lease matches the existing config
@@ -40,7 +36,7 @@ if ($a_vip[$vid]['subnet'] == $new_ip_address && $a_vip[$vid]['subnet_bits'] == 
 
 # Update existing gateway
 $a_gateway_item = &config_read_array('gateways', 'gateway_item');
-$gid = array_search($if, array_column($a_gateway_item, 'interface'));
+$gid = array_search($ifname, array_column($a_gateway_item, 'interface'));
 log_error("Updating gateway $gid to $new_routers");
 $a_gateway_item[$gid]['gateway'] = $new_routers;
 
@@ -53,17 +49,17 @@ foreach ($oids as $oid) {
 }
 
 # De-configure the CARP virtual IP
-log_error("Bringing $if CARP down");
+log_error("Bringing $ifname CARP down");
 interface_vip_bring_down($a_vip[$vid]);
 
 # Update the CARP config
-log_error("Updating $if CARP IP address to $new_ip_address/$new_subnet_cidr");
+log_error("Updating $ifname CARP IP address to $new_ip_address/$new_subnet_cidr");
 $a_vip[$vid]['subnet'] = $new_ip_address;
 $a_vip[$vid]['subnet_bits'] = $new_subnet_cidr;
 write_config();
 
 # Re-configure the CARP virtual IP
-log_error("Re-configuring $if CARP");
+log_error("Re-configuring $ifname CARP");
 interface_carp_configure($a_vip[$vid]);
 system_routing_configure();
 plugins_configure('monitor');
