@@ -28,7 +28,7 @@ if ($iface != $if_wan && $iface != $if_opt5) {
 }
 
 # Translate interface name
-$ifname = convert_real_interface_to_friendly_interface_name($iface)
+$ifname = convert_real_interface_to_friendly_interface_name($iface);
 
 if ($type === "MASTER") {
     log_error("start dhcpcd on interface '$iface' due to CARP event '$type'");
