@@ -41,8 +41,8 @@ if ($type === "MASTER") {
     $vid = array_search($ifname, array_column($a_vip, 'interface'));
     $subnet = $a_vip[$vid]['subnet'];
 
-    log_error("Running 'dhcpcd -M --noconfigure $iface -r $subnet'");
-    exec("dhcpcd -M --noconfigure $iface -r $subnet");
+    log_error("Running 'dhcpcd -b -r $subnet -t 0 --noconfigure $iface'");
+    exec("dhcpcd -b -r $subnet -t 0 --noconfigure $iface");
 } else {
     log_error("stop dhcpcd on interface '$iface' due to CARP event '$type'");
 
