@@ -46,9 +46,8 @@ if ($type === "MASTER") {
 } else {
     log_error("stop dhcpcd on interface '$iface' due to CARP event '$type'");
 
-    # TODO: Only kill dhcpcd on $iface
-    log_error("Running 'killall dhcpcd'");
-    exec("killall dhcpcd");
+    log_error("Running 'dhcpcd -x $iface'");
+    exec("dhcpcd -x $iface");
 
     if (!empty(shell_exec("ifconfig $iface | grep hwaddr"))) {
         $mac = rtrim(shell_exec("ifconfig $iface | grep hwaddr | cut -d' ' -f2"));
