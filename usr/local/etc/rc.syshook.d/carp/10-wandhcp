@@ -33,7 +33,7 @@ $ifname = convert_real_interface_to_friendly_interface_name($iface);
 if ($type === "MASTER") {
     log_error("start dhcpcd on interface '$iface' due to CARP event '$type'");
 
-    $mac = sprintf('56:48:46:77:63:%02x', $vhid);
+    $mac = sprintf('00:00:5e:00:01:%02x', $vhid);
     log_error("Running 'ifconfig $iface ether $mac'");
     exec("ifconfig $iface ether $mac");
 
@@ -55,4 +55,3 @@ if ($type === "MASTER") {
         exec("ifconfig $iface ether $mac");
     }
 }
-
