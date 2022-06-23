@@ -18,10 +18,12 @@ if (!strstr($subsystem, '@')) {
     exit(1);
 }
 
-list ($vhid, $iface) = explode('@', $subsystem);
-$ifkey = get_real_interface();
+$if_wan = get_real_interface('wan');
+$if_opt5 = get_real_interface('opt5');
 
-if ($iface != $ifkey) {
+list ($vhid, $iface) = explode('@', $subsystem);
+
+if ($iface != $if_wan && $iface != $if_opt5) {
     exit(0);
 }
 
@@ -41,6 +43,7 @@ if ($type === "MASTER") {
 } else {
     log_error("stop dhcpcd on interface '$iface' due to CARP event '$type'");
 
+    # TODO: Only kill dhcpcd on $iface
     log_error("Running 'killall dhcpcd'");
     exec("killall dhcpcd");
 
