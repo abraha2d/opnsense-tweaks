@@ -28,23 +28,28 @@ $a_vip = &config_read_array('virtualip', 'vip');
 $vid = array_search($ifname, array_column($a_vip, 'interface'));
 log_error("Found $ifname CARP at index $vid");
 $subnet = $a_vip[$vid]['subnet'];
+$subnet_bits = $a_vip[$vid]['subnet_bits'];
+
+# Find existing gateway config
+$a_gateway_item = &config_read_array('gateways', 'gateway_item');
+$gid = array_search($ifname, array_column($a_gateway_item, 'interface'));
+log_error("Found $ifname gateway at index $gid");
+$gateway = $a_gateway_item[$gid]['gateway'];
 
 # Don't do anything if the new lease matches the existing config
-if ($a_vip[$vid]['subnet'] == $new_ip_address && $a_vip[$vid]['subnet_bits'] == $new_subnet_cidr) {
+if ($subnet == $new_ip_address && $subnet_bits == $new_subnet_cidr && $gateway == $new_routers) {
   exit(0);
 }
 
 # Update existing gateway
-$a_gateway_item = &config_read_array('gateways', 'gateway_item');
-$gid = array_search($ifname, array_column($a_gateway_item, 'interface'));
-log_error("Updating gateway $gid to $new_routers");
+log_error("Updating $ifname gateway from $gateway to $new_routers");
 $a_gateway_item[$gid]['gateway'] = $new_routers;
 
 # Update existing NAT outbound rule
 $a_out = &config_read_array('nat', 'outbound', 'rule');
 $oids = array_keys(array_column($a_out, 'target'), $subnet);
 foreach ($oids as $oid) {
-  log_error("Updating outbound NAT rule $oid to $new_ip_address");
+  log_error("Updating outbound NAT rule $oid from $subnet to $new_ip_address");
   $a_out[$oid]['target'] = $new_ip_address;
 }
 
@@ -53,7 +58,7 @@ log_error("Bringing $ifname CARP down");
 interface_vip_bring_down($a_vip[$vid]);
 
 # Update the CARP config
-log_error("Updating $ifname CARP IP address to $new_ip_address/$new_subnet_cidr");
+log_error("Updating $ifname CARP IP address from $subnet/$subnet_bits to $new_ip_address/$new_subnet_cidr");
 $a_vip[$vid]['subnet'] = $new_ip_address;
 $a_vip[$vid]['subnet_bits'] = $new_subnet_cidr;
 write_config();
