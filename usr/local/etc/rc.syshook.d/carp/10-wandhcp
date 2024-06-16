@@ -20,10 +20,12 @@ if (!strstr($subsystem, '@')) {
 
 $if_wan = get_real_interface('wan');
 $if_opt5 = get_real_interface('opt5');
+$if_opt7 = get_real_interface('opt7');
 
 list ($vhid, $iface) = explode('@', $subsystem);
 
-if ($iface != $if_wan && $iface != $if_opt5) {
+if ($iface != $if_wan && $iface != $if_opt5 && $iface != $if_opt7) {
+    log_error("Ignoring non-WAN interface '$iface'");
     exit(0);
 }
 
