@@ -65,8 +65,35 @@ log_error("Found $ifname gateway at index $gid");
 $gateway = $a_gateway_item[$gid]['gateway'];
 log_error("$ifname gateway: $gateway");
 
+# Find existing firewall alias
+function aliasIterator() {
+  foreach ((new \OPNsense\Firewall\Alias())->aliases->alias->iterateItems() as $id => $item) {
+    $record = [];
+    foreach ($item->iterateItems() as $key => $value) {
+      $record[$key] = (string)$value;
+    }
+    $record['uuid'] = (string)$item->getAttributes()['uuid'];
+    yield $record;
+  }
+}
+
+$a_alias = iterator_to_array(aliasIterator());
+$aid = array_search("_{$ifname}_address", array_column($a_alias, 'name'));
+if ($aid === false) {
+  log_error("Did not find firewall alias _{$ifname}_address");
+  exit(1);
+}
+
+log_error("Found firewall alias for $ifname at index $aid");
+$alias_address = $a_alias[$aid]['content'];
+log_error("_{$ifname}_address: $alias_address");
+
 # Don't do anything if the new lease matches the existing config
-if ($subnet == $new_ip_address && $subnet_bits == $new_subnet_cidr && $gateway == $new_routers) {
+if ($subnet == $new_ip_address
+  && $subnet_bits == $new_subnet_cidr
+  && $gateway == $new_routers
+  && $alias_address == $new_ip_address
+) {
   log_error("Nothing to update for $ifname");
   exit(0);
 }
@@ -83,6 +110,13 @@ foreach ($oids as $oid) {
   $a_out[$oid]['target'] = $new_ip_address;
 }
 
+# Update existing firewall alias
+log_error("Updating firewall alias _{$ifname}_address from $alias_address to $new_ip_address");
+$alias = new \OPNsense\Firewall\Alias();
+$alias_node = $alias->getNodeByReference('aliases.alias.' . $a_alias[$aid]['uuid']);
+$alias_node->setNodes(['content' => $new_ip_address]);
+$alias->serializeToConfig();
+
 # De-configure the CARP virtual IP
 log_error("Bringing $ifname CARP down");
 interface_vip_bring_down($a_vip[$vid]);
@@ -92,8 +126,8 @@ log_error("Updating $ifname CARP IP address from $subnet/$subnet_bits to $new_ip
 $a_vip[$vid]['subnet'] = $new_ip_address;
 $a_vip[$vid]['subnet_bits'] = $new_subnet_cidr;
 $vip = new OPNsense\Interfaces\Vip();
-$node = $vip->getNodeByReference('vip.' . $a_vip[$vid]['uuid']);
-$node->setNodes($a_vip[$vid]);
+$vip_node = $vip->getNodeByReference('vip.' . $a_vip[$vid]['uuid']);
+$vip_node->setNodes($a_vip[$vid]);
 $vip->serializeToConfig();
 
 # Serialize and write config
