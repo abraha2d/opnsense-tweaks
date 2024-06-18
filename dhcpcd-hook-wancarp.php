@@ -27,7 +27,20 @@ $ifname = convert_real_interface_to_friendly_interface_name($interface);
 log_error("Mapped $interface to $ifname");
 
 # Find existing CARP config
-$a_vip = &config_read_array('virtualip', 'vip');
+function carpIterator() {
+  foreach ((new OPNsense\Interfaces\Vip())->vip->iterateItems() as $id => $item) {
+    if ($item->mode == 'carp') {
+      $record = [];
+      foreach ($item->iterateItems() as $key => $value) {
+        $record[$key] = (string)$value;
+      }
+      $record['uuid'] = (string)$item->getAttributes()['uuid'];
+      yield $record;
+    }
+  }
+}
+
+$a_vip = iterator_to_array(carpIterator());
 $vid = array_search($ifname, array_column($a_vip, 'interface'));
 if ($vid === false) {
   log_error("Did not find CARP for $ifname");
@@ -78,6 +91,10 @@ interface_vip_bring_down($a_vip[$vid]);
 log_error("Updating $ifname CARP IP address from $subnet/$subnet_bits to $new_ip_address/$new_subnet_cidr");
 $a_vip[$vid]['subnet'] = $new_ip_address;
 $a_vip[$vid]['subnet_bits'] = $new_subnet_cidr;
+$vip = new OPNsense\Interfaces\Vip();
+$node = $vip->getNodeByReference('vip.' . $a_vip[$vid]['uuid']);
+$node->setNodes($a_vip[$vid]);
+$vip->serializeToConfig();
 
 # Serialize and write config
 $config = OPNsense\Core\Config::getInstance()->toArray(listtags());
