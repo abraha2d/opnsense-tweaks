@@ -102,14 +102,6 @@ if ($subnet == $new_ip_address
 log_error("Updating $ifname gateway from $gateway to $new_routers");
 $gateways->createOrUpdateGateway(['gateway' => $new_routers], $a_gateway_item[$gid]['uuid']);
 
-# Update existing NAT outbound rule
-$a_out = &config_read_array('nat', 'outbound', 'rule');
-$oids = array_keys(array_column($a_out, 'target'), $subnet);
-foreach ($oids as $oid) {
-  log_error("Updating outbound NAT rule $oid from $subnet to $new_ip_address");
-  $a_out[$oid]['target'] = $new_ip_address;
-}
-
 # Update existing firewall alias
 log_error("Updating firewall alias _{$ifname}_address from $alias_address to $new_ip_address");
 $alias = new \OPNsense\Firewall\Alias();
