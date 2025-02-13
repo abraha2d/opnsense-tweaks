@@ -55,7 +55,8 @@ log_error("$ifname CARP: $subnet/$subnet_bits");
 # Find existing gateway config
 $gateways = new \OPNsense\Routing\Gateways();
 $a_gateway_item = iterator_to_array($gateways->gatewayIterator());
-$gid = array_search($ifname, array_column($a_gateway_item, 'interface'));
+$a_upstream_gw_item = array_filter($a_gateway_item, function($gw_item) { return $gw_item['defaultgw']; });
+$gid = array_search($ifname, array_column($a_upstream_gw_item, 'interface'));
 if ($gid === false) {
   log_error("Did not find gateway for $ifname");
   exit(1);
