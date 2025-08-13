@@ -11,60 +11,97 @@ require_once('util.inc');
 
 # Get info from dhcpcd
 $interface = getenv('interface');
+$reason = getenv('reason');
 $new_ip_address = getenv('new_ip_address');
 $new_subnet_cidr = getenv('new_subnet_cidr');
 $new_routers = getenv('new_routers');
 
+$ipv4_reasons = array("BOUND", "REBOOT");
+$ipv6_reasons = array("BOUND6", "REBOOT6", "ROUTERADVERT");
+
+if (in_array($reason, $ipv4_reasons)) {
+  $ipv6 = false;
+} else if (in_array($reason, $ipv6_reasons)) {
+  $ipv6 = true;
+  $ra = $reason === "ROUTERADVERT";
+} else {
+  exit(0);
+}
+
+if ($ipv6) {
+  $new_ip_address = getenv('new_dhcp6_ia_na1_ia_addr1');
+  $new_subnet_cidr = getenv('nd1_prefix_information1_length');
+  $new_routers = getenv('nd1_from');
+}
+
 # Die if we don't have the necessary info
-if (empty($interface) || empty($new_ip_address) || empty($new_subnet_cidr) || empty($new_routers)) {
-  log_error("Did not get one of '$interface', '$new_ip_address', '$new_subnet_cidr', '$new_routers'");
+if ($ipv6 && $ra && (empty($interface) || empty($new_subnet_cidr) || empty($new_routers))) {
+  log_error("[ra $reason] Did not get one of '$interface', '$new_subnet_cidr', '$new_routers'");
+  exit(1);
+} else if ($ipv6 && !$ra && (empty($interface) || empty($new_ip_address))) {
+  log_error("[v6 $reason] Did not get one of '$interface', '$new_ip_address'");
+  exit(1);
+} else if (!$ipv6 && (empty($interface) || empty($new_ip_address) || empty($new_subnet_cidr) || empty($new_routers))) {
+  log_error("[v4 $reason] Did not get one of '$interface', '$new_ip_address', '$new_subnet_cidr', '$new_routers'");
   exit(1);
 }
-log_error("$interface DHCP: $new_ip_address/$new_subnet_cidr, gateway $new_routers");
+
+if ($ipv6) {
+  if ($ra) {
+    //log_error("[ra] $interface: */$new_subnet_cidr, gateway $new_routers");
+  } else {
+    log_error("[v6] $interface: $new_ip_address");
+  }
+} else {
+  log_error("[v4] $interface: $new_ip_address/$new_subnet_cidr, gateway $new_routers");
+}
 
 # Translate interface name
 $ifname = convert_real_interface_to_friendly_interface_name($interface);
-log_error("Mapped $interface to $ifname");
+//log_msg("Mapped $interface to $ifname");
 
-# Find existing CARP config
-function carpIterator() {
+if ($ipv6) {
+  $descr = "$ifname DHCPv6";
+} else {
+  $descr = "$ifname DHCP";
+}
+
+# Find existing VIP config
+function vipIterator() {
   foreach ((new OPNsense\Interfaces\Vip())->vip->iterateItems() as $id => $item) {
-    if ($item->mode == 'carp') {
-      $record = [];
-      foreach ($item->iterateItems() as $key => $value) {
-        $record[$key] = (string)$value;
-      }
-      $record['uuid'] = (string)$item->getAttributes()['uuid'];
-      yield $record;
+    $record = [];
+    foreach ($item->iterateItems() as $key => $value) {
+      $record[$key] = (string)$value;
     }
+    $record['uuid'] = (string)$item->getAttributes()['uuid'];
+    yield $record;
   }
 }
 
-$a_vip = iterator_to_array(carpIterator());
-$vid = array_search($ifname, array_column($a_vip, 'interface'));
-if ($vid === false) {
-  log_error("Did not find CARP for $ifname");
+$a_vip = iterator_to_array(vipIterator());
+$vid = array_search($descr, array_column($a_vip, 'descr'));
+If ($vid === false) {
+  log_error("Did not find VIP for $ifname");
   exit(1);
 }
 
-log_error("Found $ifname CARP at index $vid");
+//log_msg("Found $ifname VIP at index $vid");
 $subnet = $a_vip[$vid]['subnet'];
 $subnet_bits = $a_vip[$vid]['subnet_bits'];
-log_error("$ifname CARP: $subnet/$subnet_bits");
+//log_msg("$ifname VIP: $subnet/$subnet_bits");
 
 # Find existing gateway config
 $gateways = new \OPNsense\Routing\Gateways();
 $a_gateway_item = iterator_to_array($gateways->gatewayIterator());
-$a_upstream_gw_item = array_filter($a_gateway_item, function($gw_item) { return $gw_item['defaultgw']; });
-$gid = array_search($ifname, array_column($a_upstream_gw_item, 'interface'));
+$gid = array_search($descr, array_column($a_gateway_item, 'descr'));
 if ($gid === false) {
   log_error("Did not find gateway for $ifname");
   exit(1);
 }
 
-log_error("Found $ifname gateway at index $gid");
+//log_msg("Found $ifname gateway at index $gid");
 $gateway = $a_gateway_item[$gid]['gateway'];
-log_error("$ifname gateway: $gateway");
+//log_msg("$ifname gateway: $gateway");
 
 # Find existing firewall alias
 function aliasIterator() {
@@ -79,45 +116,65 @@ function aliasIterator() {
 }
 
 $a_alias = iterator_to_array(aliasIterator());
-$aid = array_search("_{$ifname}_address", array_column($a_alias, 'name'));
+$aid = array_search($descr, array_column($a_alias, 'description'));
 if ($aid === false) {
-  log_error("Did not find firewall alias _{$ifname}_address");
+  log_error("Did not find firewall alias for $ifname");
   exit(1);
 }
 
-log_error("Found firewall alias for $ifname at index $aid");
+//log_msg("Found firewall alias for $ifname at index $aid");
 $alias_address = $a_alias[$aid]['content'];
-log_error("_{$ifname}_address: $alias_address");
+//log_msg("$ifname firewall alias: $alias_address");
 
 # Don't do anything if the new lease matches the existing config
-if ($subnet == $new_ip_address
+if ($ipv6 && $ra
+  && $subnet_bits == $new_subnet_cidr
+  && $gateway == $new_routers
+) {
+  //log_msg("[ra] Nothing to update for $ifname");
+  exit(0);
+} else if ($ipv6 && !$ra
+  && $subnet == $new_ip_address
+) {
+  log_msg("[v6] Nothing to update for $ifname");
+  exit(0);
+} else if (!$ipv6
+  && $subnet == $new_ip_address
   && $subnet_bits == $new_subnet_cidr
   && $gateway == $new_routers
   && $alias_address == $new_ip_address
 ) {
-  log_error("Nothing to update for $ifname");
+  log_msg("[v4] Nothing to update for $ifname");
   exit(0);
 }
 
 # Update existing gateway
-log_error("Updating $ifname gateway from $gateway to $new_routers");
-$gateways->createOrUpdateGateway(['gateway' => $new_routers], $a_gateway_item[$gid]['uuid']);
+if (!$ipv6 || $ipv6 && $ra) {
+  log_error("Updating $ifname gateway from $gateway to $new_routers");
+  $gateways->createOrUpdateGateway(['gateway' => $new_routers], $a_gateway_item[$gid]['uuid']);
+}
 
 # Update existing firewall alias
-log_error("Updating firewall alias _{$ifname}_address from $alias_address to $new_ip_address");
-$alias = new \OPNsense\Firewall\Alias();
-$alias_node = $alias->getNodeByReference('aliases.alias.' . $a_alias[$aid]['uuid']);
-$alias_node->setNodes(['content' => $new_ip_address]);
-$alias->serializeToConfig();
+if (!$ipv6 || $ipv6 && !$ra) {
+  log_error("Updating $ifname firewall alias from $alias_address to $new_ip_address");
+  $alias = new \OPNsense\Firewall\Alias();
+  $alias_node = $alias->getNodeByReference('aliases.alias.' . $a_alias[$aid]['uuid']);
+  $alias_node->setNodes(['content' => $new_ip_address]);
+  $alias->serializeToConfig();
+}
 
-# De-configure the CARP virtual IP
-log_error("Bringing $ifname CARP down");
+# De-configure the virtual IP
+log_msg("Bringing $ifname VIP down");
 interface_vip_bring_down($a_vip[$vid]);
 
-# Update the CARP config
-log_error("Updating $ifname CARP IP address from $subnet/$subnet_bits to $new_ip_address/$new_subnet_cidr");
-$a_vip[$vid]['subnet'] = $new_ip_address;
-$a_vip[$vid]['subnet_bits'] = $new_subnet_cidr;
+# Update the VIP config
+log_error("Updating $ifname VIP from $subnet/$subnet_bits to $new_ip_address/$new_subnet_cidr");
+if (!$ipv6 || $ipv6 && !$ra) {
+  $a_vip[$vid]['subnet'] = $new_ip_address;
+}
+if (!$ipv6 || $ipv6 && $ra) {
+  $a_vip[$vid]['subnet_bits'] = $new_subnet_cidr;
+}
 $vip = new OPNsense\Interfaces\Vip();
 $vip_node = $vip->getNodeByReference('vip.' . $a_vip[$vid]['uuid']);
 $vip_node->setNodes($a_vip[$vid]);
@@ -127,8 +184,8 @@ $vip->serializeToConfig();
 $config = OPNsense\Core\Config::getInstance()->toArray(listtags());
 write_config();
 
-# Re-configure the CARP virtual IP
-log_error("Re-configuring $ifname CARP");
+# Re-configure the virtual IP
+log_msg("Re-configuring $ifname VIP");
 interface_carp_configure($a_vip[$vid]);
 system_routing_configure();
 plugins_configure('monitor');
