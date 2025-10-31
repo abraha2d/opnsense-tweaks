@@ -56,12 +56,9 @@ if ($type === "MASTER") {
     $v4_vid = array_search("$ifname DHCP", array_column($a_vip, 'descr'));
     $v4_subnet = $a_vip[$v4_vid]['subnet'];
 
-    $v6_vid = array_search("$ifname DHCPv6", array_column($a_vip, 'descr'));
-    #$v6_subnet = $a_vip[$v6_vid]['subnet'];
-
-    log_error("Running 'dhcpcd -r $v4_subnet --noconfigure $iface'");
-    #unlink("/var/db/dhcpcd/$iface.lease6");
-    exec("dhcpcd -r $v4_subnet --noconfigure $iface");
+    log_error("Running 'dhcpcd -b -r $v4_subnet --noconfigure $iface'");
+    unlink("/var/db/dhcpcd/$iface.lease6");
+    exec("dhcpcd -b -r $v4_subnet --noconfigure $iface");
 } else {
     log_error("stop dhcpcd on interface '$iface' due to CARP event '$type'");
 
