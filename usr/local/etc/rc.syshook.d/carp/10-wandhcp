@@ -33,6 +33,19 @@ if ($iface != $if_wan
 # Translate interface name
 $ifname = convert_real_interface_to_friendly_interface_name($iface);
 
+function vipIterator() {
+  foreach ((new OPNsense\Interfaces\Vip())->vip->iterateItems() as $id => $item) {
+    $record = [];
+    foreach ($item->iterateItems() as $key => $value) {
+      $record[$key] = (string)$value;
+    }
+    $record['uuid'] = (string)$item->getAttributes()['uuid'];
+    yield $record;
+  }
+}
+
+$a_vip = iterator_to_array(vipIterator());
+
 if ($type === "MASTER") {
     log_error("start dhcpcd on interface '$iface' due to CARP event '$type'");
 
@@ -40,12 +53,15 @@ if ($type === "MASTER") {
     log_error("Running 'ifconfig $iface ether $mac'");
     exec("ifconfig $iface ether $mac");
 
-    $a_vip = &config_read_array('virtualip', 'vip');
-    $vid = array_search($ifname, array_column($a_vip, 'interface'));
-    $subnet = $a_vip[$vid]['subnet'];
+    $v4_vid = array_search("$ifname DHCP", array_column($a_vip, 'descr'));
+    $v4_subnet = $a_vip[$v4_vid]['subnet'];
 
-    log_error("Running 'dhcpcd -b -r $subnet -t 0 --noconfigure $iface'");
-    exec("dhcpcd -b -r $subnet -t 0 --noconfigure $iface");
+    $v6_vid = array_search("$ifname DHCPv6", array_column($a_vip, 'descr'));
+    #$v6_subnet = $a_vip[$v6_vid]['subnet'];
+
+    log_error("Running 'dhcpcd -r $v4_subnet --noconfigure $iface'");
+    #unlink("/var/db/dhcpcd/$iface.lease6");
+    exec("dhcpcd -r $v4_subnet --noconfigure $iface");
 } else {
     log_error("stop dhcpcd on interface '$iface' due to CARP event '$type'");
 
