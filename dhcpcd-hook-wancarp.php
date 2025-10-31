@@ -32,6 +32,19 @@ if ($ipv6) {
   $new_ip_address = getenv('new_dhcp6_ia_na1_ia_addr1');
   $new_subnet_cidr = getenv('nd1_prefix_information1_length');
   $new_routers = getenv('nd1_from');
+  $new_prefixes = array();
+
+  $i = 1;
+  while (true) {
+    $_addr = getenv("new_dhcp6_ia_pd1_prefix$i");
+    $_len = getenv("new_dhcp6_ia_pd1_prefix{$i}_length");
+    if (!empty($_addr) && !empty($_len)) {
+      $new_prefixes[$i] = array("addr"=>$_addr, "len"=>$_len);
+      $last_prefix_num = $i++;
+    } else {
+      break;
+    }
+  }
 }
 
 # Die if we don't have the necessary info
@@ -51,6 +64,11 @@ if ($ipv6) {
     //log_error("[ra] $interface: */$new_subnet_cidr, gateway $new_routers");
   } else {
     log_error("[v6] $interface: $new_ip_address");
+    foreach ($new_prefixes as $i => $prefix) {
+      $_addr = $prefix["addr"];
+      $_len = $prefix["len"];
+      log_error("[v6] $interface prefix $i: $_addr/$_len");
+    }
   }
 } else {
   log_error("[v4] $interface: $new_ip_address/$new_subnet_cidr, gateway $new_routers");
@@ -126,6 +144,43 @@ if ($aid === false) {
 $alias_address = $a_alias[$aid]['content'];
 //log_msg("$ifname firewall alias: $alias_address");
 
+# Update NPTv6 rules, if needed
+function nptRuleIterator() {
+  foreach ((new \OPNsense\Firewall\Filter())->npt->rule->iterateItems() as $id => $item) {
+    $record = [];
+    foreach ($item->iterateItems() as $key => $value) {
+      $record[$key] = (string)$value;
+    }
+    $record['uuid'] = (string)$item->getAttributes()['uuid'];
+    yield $record;
+  }
+}
+
+$a_nptRule = iterator_to_array(nptRuleIterator());
+$nptRules_updated = false;
+
+foreach ($new_prefixes as $i => $prefix) {
+  $nrid = array_search($descr . " prefix $i", array_column($a_nptRule, 'description'));
+  if ($nrid === false) {
+    log_error("Did not find NPTv6 rule for $ifname prefix $i");
+    continue;
+  }
+
+  $nptRule_dest = $a_nptRule[$nrid]['destination_net'];
+  $new_prefix = $prefix["addr"] . "/" . $prefix["len"];
+
+  if ($nptRule_dest == $new_prefix) {
+    log_msg("[v6] Nothing to update for $ifname prefix $i");
+  } else {
+    log_error("Updating $ifname prefix $i NPTv6 rule from $nptRule_dest to $new_prefix");
+    $filter = new \OPNsense\Firewall\Filter();
+    $filter_node = $filter->getNodeByReference('npt.rule.' . $a_nptRule[$nrid]['uuid']);
+    $filter_node->setNodes(['destination_net' => $new_prefix]);
+    $filter->serializeToConfig();
+    $nptRules_updated = true;
+  }
+}
+
 # Don't do anything if the new lease matches the existing config
 if ($ipv6 && $ra
   && $subnet_bits == $new_subnet_cidr
@@ -135,6 +190,7 @@ if ($ipv6 && $ra
   exit(0);
 } else if ($ipv6 && !$ra
   && $subnet == $new_ip_address
+  && !$nptRules_updated
 ) {
   log_msg("[v6] Nothing to update for $ifname");
   exit(0);
