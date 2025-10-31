@@ -186,7 +186,16 @@ write_config();
 
 # Re-configure the virtual IP
 log_msg("Re-configuring $ifname VIP");
-interface_carp_configure($a_vip[$vid]);
+switch ($a_vip[$vid]['mode']) {
+  case 'ipalias':
+    interface_ipalias_configure($a_vip[$vid]);
+    break;
+  case 'carp':
+    interface_carp_configure($a_vip[$vid]);
+    break;
+}
+
+# Re-configure everything else
 system_routing_configure();
 plugins_configure('monitor');
 filter_configure();
