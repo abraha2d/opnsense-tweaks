@@ -1,1 +1,2 @@
-/root/opnsense-tweaks/dhcpcd-hook-wancarp.php
+#!/bin/sh
+exec /root/opnsense-tweaks/src/dhcpcarp-dhcp-hook.php "$@"

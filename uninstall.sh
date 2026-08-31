@@ -1,3 +1,4 @@
+#!/bin/sh
 killall dhcpcd
 ( cd /usr/ports/net/dhcpcd && make deinstall )
 
