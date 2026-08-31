@@ -20,7 +20,4 @@
             <directory>tests</directory>
         </exclude>
     </source>
-    <logging>
-        <junit outputFile="junit.xml"/>
-    </logging>
 </phpunit>

@@ -22,16 +22,24 @@ shellcheck:
 pest:
   stage: test
   image: thecodingmachine/php:8.5-v5-cli@sha256:42215b1a124696a0c5050e68401eb20e168e511d21830f4dfcf1c096beafdb10
+  variables:
+    PHP_EXTENSION_PCOV: "1"
   cache:
     key: "$CI_COMMIT_REF_SLUG"
     paths:
       - vendor/
+  coverage: '/Total:\s*\d+\.\d+\s*%/'
   script:
     - php --version
     - composer --version
     - composer install --no-interaction --prefer-dist --no-progress
-    - ./vendor/bin/pest --colors=always --ci
+    - ./vendor/bin/pest --colors=always --ci --log-junit=junit.xml --coverage --coverage-cobertura=coverage.cobertura.xml
   artifacts:
+    when: always
     reports:
       junit: junit.xml
-    when: always
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.cobertura.xml
+    paths:
+      - coverage.cobertura.xml

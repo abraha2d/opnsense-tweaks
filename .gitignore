@@ -1,4 +1,6 @@
 /vendor/
 .phpunit.cache/
 junit.xml
+coverage.cobertura.xml
+coverage.xml
 .dhcpcarp_peer
