@@ -1,0 +1,30 @@
+{
+    "name": "abraha2d/opnsense-tweaks",
+    "description": "DHCP + CARP HA for OPNsense — test harness",
+    "type": "project",
+    "require": {
+        "php": "^8.5"
+    },
+    "require-dev": {
+        "pestphp/pest": "^3.8"
+    },
+    "autoload": {
+        "files": []
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "pest --colors=always",
+        "test:coverage": "pest --coverage",
+        "lint": "find ./src ./tests -name '*.php' -not -path './vendor/*' -exec php -l {} \\;"
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "minimum-stability": "stable"
+}

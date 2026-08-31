@@ -1,0 +1,41 @@
+# GitLab CI for opnsense-tweaks — PHP 8.5 (OPNsense 26.7.2_2)
+image: php:8.5
+
+stages:
+  - lint
+  - test
+
+variables:
+  COMPOSER_ALLOW_SUPERUSER: "1"
+
+cache:
+  key: "$CI_COMMIT_REF_SLUG"
+  paths:
+    - vendor/
+
+before_script:
+  - apt-get update -qq && apt-get install -y -qq shellcheck git unzip > /dev/null
+  - php --version
+  - composer --version
+  - composer install --no-interaction --prefer-dist --no-progress
+
+php-lint:
+  stage: lint
+  script:
+    - echo "PHP lint..."
+    - find . -name '*.php' -not -path './vendor/*' -exec php -l {} \;
+
+shellcheck:
+  stage: lint
+  script:
+    - echo "ShellCheck..."
+    - shellcheck install.sh uninstall.sh usr/local/etc/rc.syshook.d/carp/10-wandhcp usr/local/libexec/dhcpcd-hooks/10-wancarp
+
+pest:
+  stage: test
+  script:
+    - ./vendor/bin/pest --colors=always --ci
+  artifacts:
+    reports:
+      junit: junit.xml
+    when: always
