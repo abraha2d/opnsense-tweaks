@@ -1,6 +1,3 @@
-# GitLab CI for opnsense-tweaks — PHP 8.5 (OPNsense 26.7.2_2)
-image: php:8.5
-
 stages:
   - lint
   - test
@@ -8,32 +5,31 @@ stages:
 variables:
   COMPOSER_ALLOW_SUPERUSER: "1"
 
-cache:
-  key: "$CI_COMMIT_REF_SLUG"
-  paths:
-    - vendor/
-
-before_script:
-  - apt-get update -qq && apt-get install -y -qq shellcheck git unzip > /dev/null
-  - php --version
-  - composer --version
-  - composer install --no-interaction --prefer-dist --no-progress
-
 php-lint:
   stage: lint
+  image: thecodingmachine/php:8.5-v5-cli@sha256:42215b1a124696a0c5050e68401eb20e168e511d21830f4dfcf1c096beafdb10
   script:
-    - echo "PHP lint..."
+    - php --version
     - find . -name '*.php' -not -path './vendor/*' -exec php -l {} \;
 
 shellcheck:
   stage: lint
+  image: koalaman/shellcheck:stable@sha256:bb596a0d169b85ddd81d8b6d3a2ff6d5baf5fca10b97f575ebc647c3dff62b3d
   script:
-    - echo "ShellCheck..."
+    - shellcheck --version
     - shellcheck install.sh uninstall.sh usr/local/etc/rc.syshook.d/carp/10-wandhcp usr/local/libexec/dhcpcd-hooks/10-wancarp
 
 pest:
   stage: test
+  image: thecodingmachine/php:8.5-v5-cli@sha256:42215b1a124696a0c5050e68401eb20e168e511d21830f4dfcf1c096beafdb10
+  cache:
+    key: "$CI_COMMIT_REF_SLUG"
+    paths:
+      - vendor/
   script:
+    - php --version
+    - composer --version
+    - composer install --no-interaction --prefer-dist --no-progress
     - ./vendor/bin/pest --colors=always --ci
   artifacts:
     reports:
