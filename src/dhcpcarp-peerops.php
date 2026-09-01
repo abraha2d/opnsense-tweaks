@@ -39,7 +39,7 @@ function dhcpcarp_peer_exec($peer_ip, $cmd, $timeout = 2, $stdin = null)
         'ssh -o BatchMode=yes -o ConnectTimeout=%d -o StrictHostKeyChecking=accept-new -o LogLevel=ERROR root@%s %s',
         $timeout,
         $peer_ip,
-        escapeshellarg($cmd)
+        escapeshellarg($cmd),
     );
 
     if ($stdin === null) {

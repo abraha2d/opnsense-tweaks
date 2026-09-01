@@ -45,7 +45,7 @@ function dhcpcarp_renew($iface, $mode)
     return false;
 }
 
-$args = array_slice($argv, 1);
+$args = array_slice($_SERVER['argv'] ?? [], 1);
 $ifname = null;
 $mode = 'renew';
 
@@ -53,11 +53,11 @@ for ($i = 0; $i < count($args); $i++) {
     $a = $args[$i];
     if ($a === '--renew') {
         $mode = 'renew';
-    } else if ($a === '--reset') {
+    } elseif ($a === '--reset') {
         $mode = 'reset';
-    } else if ($a === '-h' || $a === '--help') {
+    } elseif ($a === '-h' || $a === '--help') {
         usage();
-    } else if ($a[0] === '-') {
+    } elseif ($a[0] === '-') {
         usage("unknown option $a");
     } else {
         $ifname = $a;
@@ -83,7 +83,7 @@ $is_master = dhcpcarp_is_carp_master($iface);
 
 if ($is_master === false) {
     dhcpcarp_log_and_exit("$ifname CARP is currently BACKUP, refusing to run");
-} else if ($is_master === null) {
+} elseif ($is_master === null) {
     dhcpcarp_log("$ifname CARP is currently unknown");
 }
 

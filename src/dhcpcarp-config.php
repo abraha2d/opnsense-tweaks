@@ -60,7 +60,7 @@ function dhcpcarp_apply_config(array $data, bool $do_configure = true)
     dhcpcarp_log("applied updates for $descr");
 }
 
-if (PHP_SAPI === 'cli' && isset($argv) && realpath($argv[0] ?? '') === realpath(__FILE__)) {
+if (PHP_SAPI === 'cli' && isset($_SERVER['argv'][0]) && realpath($_SERVER['argv'][0]) === realpath(__FILE__)) {
     $json = '';
     $stdin = fopen('php://stdin', 'r');
 

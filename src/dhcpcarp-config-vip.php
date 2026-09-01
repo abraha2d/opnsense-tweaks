@@ -47,11 +47,11 @@ function dhcpcarp_build_vipData(array $found, string $newIp, string $newCidr, bo
     $subnet = $found['subnet'];
     $subnet_bits = $found['subnet_bits'];
 
-    if (!$ipv6 || ($ipv6 && !$ra)) {
+    if (!$ipv6 || !$ra) {
         $subnet = $newIp;
     }
 
-    if (!$ipv6 || ($ipv6 && $ra)) {
+    if (!$ipv6 || $ra) {
         $subnet_bits = $newCidr;
     }
 

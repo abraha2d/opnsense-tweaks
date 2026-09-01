@@ -5,8 +5,9 @@ require_once(__DIR__ . '/dhcpcarp-common.php');
 require_once(__DIR__ . '/dhcpcarp-dhcp.php');
 require_once(__DIR__ . '/dhcpcarp-interfaces.php');
 
-$subsystem = !empty($argv[1]) ? $argv[1] : '';
-$type = !empty($argv[2]) ? $argv[2] : '';
+$argv = $_SERVER['argv'] ?? [];
+$subsystem = $argv[1] ?? '';
+$type = $argv[2] ?? '';
 
 if (!strstr($subsystem, '@')) {
     dhcpcarp_log_and_exit("CARP event '$type' triggered from wrong source '$subsystem'");
@@ -35,7 +36,7 @@ if ($type === 'MASTER') {
     dhcpcarp_log("starting dhcpcd on interface '$iface' due to CARP event '$type'");
     dhcpcarp_start_dhcpcd($iface, $vhidInt);
 
-} else if ($type === 'BACKUP') {
+} elseif ($type === 'BACKUP') {
     dhcpcarp_log("stopping dhcpcd on interface '$iface' due to CARP event '$type'");
     dhcpcarp_stop_dhcpcd($iface);
 

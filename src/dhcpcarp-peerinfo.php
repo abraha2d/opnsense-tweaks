@@ -5,7 +5,7 @@ require_once('config.inc');
 require_once('interfaces.inc');
 
 $config = OPNsense\Core\Config::getInstance()->object();
-$mode = $argv[1] ?? '';
+$mode = ($_SERVER['argv'][1] ?? '');
 
 if ($mode === 'peer-ip') {
     echo trim((string) ($config->hasync->synchronizetoip ?? ''));
