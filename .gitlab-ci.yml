@@ -8,6 +8,8 @@ variables:
 php-lint:
   stage: test
   image: thecodingmachine/php:8.5-v5-cli@sha256:42215b1a124696a0c5050e68401eb20e168e511d21830f4dfcf1c096beafdb10
+  before_script:
+    - git config --global --add safe.directory "$CI_PROJECT_DIR"
   script:
     - php --version
     - git ls-files -- '*.php' '*.inc' | xargs -r php -l
