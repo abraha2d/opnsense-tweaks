@@ -289,8 +289,8 @@ if (!function_exists("test_reset_globals")) {
         \OPNsense\Routing\Gateways::$testGatewayRecords = null;
         \OPNsense\Firewall\Alias::$testAliasItems = null;
         \OPNsense\Firewall\Filter::$testNptItems = null;
-        // clear env DHCPv6 prefixes
-        for ($i=1;$i<=10;$i++) { putenv("new_dhcp6_ia_pd1_prefix{$i}"); putenv("new_dhcp6_ia_pd1_prefix{$i}_length"); }
+        // clear env DHCPv6 prefixes (up to 20 to avoid cross-test leaks)
+        for ($i=1;$i<=20;$i++) { putenv("new_dhcp6_ia_pd1_prefix{$i}"); putenv("new_dhcp6_ia_pd1_prefix{$i}_length"); }
         putenv("new_dhcp6_ia_na1_ia_addr1");
         putenv("nd1_prefix_information1_length");
         putenv("nd1_from");
@@ -313,12 +313,20 @@ if (!function_exists('test_make_fake_root')) {
     }
     function test_cleanup_fake_root(string $base): void {
         putenv('FAKE_ROOT'); unset($_ENV['FAKE_ROOT'], $_SERVER['FAKE_ROOT']);
+        $tmp = sys_get_temp_dir();
+        // safety: only remove paths inside temp dir and not empty/root
+        if ($base === '' || $base === '/' || $base === $tmp) {
+            return;
+        }
+        if (!str_starts_with($base, $tmp . '/') && $base !== $tmp) {
+            return;
+        }
         @exec("rm -rf ".escapeshellarg($base));
     }
 }
 
-// Pest expects (only when run via pest runner)
-if (function_exists('uses')) {
+// Pest expects (only when run via pest runner) — guard for phpstan/other tools
+if (function_exists('uses') && isset($_SERVER['argv'][0]) && str_contains((string) $_SERVER['argv'][0], 'pest')) {
     uses()->beforeEach(function(){ test_reset_globals(); })->in("Unit");
     uses()->beforeEach(function(){ test_reset_globals(); })->in("Integration");
     uses()->group('integration')->in("Integration");
