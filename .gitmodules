@@ -1,0 +1,5 @@
+[submodule "external/opnsense-core"]
+	path = external/opnsense-core
+	url = https://github.com/opnsense/core.git
+	shallow = true
+	branch = 26.7

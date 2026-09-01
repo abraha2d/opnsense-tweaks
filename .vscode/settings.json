@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "*.inc": "php"
+    },
+    "intelephense.environment.phpVersion": "8.5.0",
+    "intelephense.environment.includePaths": [
+        "external/opnsense-core/src/etc/inc",
+        "external/opnsense-core/src/opnsense/mvc/app/library",
+        "external/opnsense-core/src/opnsense/mvc/app/models"
+    ]
+}
