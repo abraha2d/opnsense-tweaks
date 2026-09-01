@@ -6,7 +6,10 @@
         "php": "^8.5"
     },
     "require-dev": {
-        "pestphp/pest": "^3.8"
+        "pestphp/pest": "^5.1",
+        "phpunit/phpcov": "^13.1",
+        "laravel/pint": "^1.24",
+        "phpstan/phpstan": "^2.2"
     },
     "autoload": {
         "files": []
@@ -19,7 +22,9 @@
     "scripts": {
         "test": "pest --colors=always",
         "test:coverage": "pest --coverage",
-        "lint": "find ./src ./tests -name '*.php' -not -path './vendor/*' -exec php -l {} \\;"
+        "lint": "pint --test src",
+        "format": "pint src",
+        "analyse": "phpstan analyse --memory-limit=1G"
     },
     "config": {
         "allow-plugins": {

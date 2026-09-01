@@ -4,10 +4,33 @@ stages:
 variables:
   COMPOSER_ALLOW_SUPERUSER: "1"
   GIT_SUBMODULE_STRATEGY: recursive
+  PHP_IMAGE: "thecodingmachine/php:8.5-v5-cli@sha256:42215b1a124696a0c5050e68401eb20e168e511d21830f4dfcf1c096beafdb10"
+  GCC_IMAGE: "gcc:14.2.0-bookworm@sha256:b99b86a28812b1e6453a231a947dc43d76fe192788a12f344a9b568bf9f5d24c"
+
+default:
+  interruptible: true
+
+.php-base: &php-base
+  image: $PHP_IMAGE
+  cache:
+    key:
+      files:
+        - composer.lock
+    paths:
+      - vendor/
+  before_script:
+    - composer install --no-interaction --prefer-dist --no-progress
+
+.pest_base: &pest_base
+  image: $PHP_IMAGE
+  variables:
+    PHP_EXTENSION_PCOV: "1"
+  cache: !reference [.php-base, cache]
+  before_script: !reference [.php-base, before_script]
 
 php-lint:
   stage: test
-  image: thecodingmachine/php:8.5-v5-cli@sha256:42215b1a124696a0c5050e68401eb20e168e511d21830f4dfcf1c096beafdb10
+  image: $PHP_IMAGE
   needs: []
   before_script:
     - git config --global --add safe.directory "$CI_PROJECT_DIR"
@@ -23,9 +46,25 @@ shellcheck:
     - shellcheck --version
     - find . \( -path ./external -prune -o -path ./vendor -prune -o -path ./.git -prune \) -o -type f -exec grep -l '^#!/.*sh' {} \; | xargs -r shellcheck
 
+lint:format:
+  extends: .php-base
+  stage: test
+  needs: []
+  script:
+    - php --version
+    - vendor/bin/pint --test src
+
+analyse:phpstan:
+  extends: .php-base
+  stage: test
+  needs: []
+  script:
+    - php --version
+    - vendor/bin/phpstan analyse --memory-limit=1G
+
 build:fakeroot:
   stage: test
-  image: gcc:14-bookworm
+  image: $GCC_IMAGE
   needs: []
   script:
     - gcc --version
@@ -39,23 +78,12 @@ build:fakeroot:
     paths:
       - fakeroot.so
 
-.pest_base: &pest_base
-  stage: test
-  image: thecodingmachine/php:8.5-v5-cli@sha256:42215b1a124696a0c5050e68401eb20e168e511d21830f4dfcf1c096beafdb10
-  variables:
-    PHP_EXTENSION_PCOV: "1"
-  cache:
-    key: "$CI_COMMIT_REF_SLUG"
-    paths:
-      - vendor/
-
 pest:unit:
   <<: *pest_base
+  stage: test
   needs: []
   script:
     - php --version
-    - composer --version
-    - composer install --no-interaction --prefer-dist --no-progress
     - ./vendor/bin/pest --testsuite=Unit --colors=always --ci --log-junit=junit-unit.xml --coverage-php=coverage-unit.cov
   artifacts:
     when: always
@@ -67,6 +95,7 @@ pest:unit:
 
 pest:integration:
   <<: *pest_base
+  stage: test
   needs:
     - job: build:fakeroot
       artifacts: true
@@ -77,10 +106,9 @@ pest:integration:
     - export FAKE_ROOT=$(mktemp -d)
     - mkdir -p "$FAKE_ROOT/var/run/dhcpcd" "$FAKE_ROOT/var/db/dhcpcd" "$FAKE_ROOT/conf" "$FAKE_ROOT/usr/local/etc" "$FAKE_ROOT/root/opnsense-tweaks"
     - echo "FAKE_ROOT=$FAKE_ROOT LD_PRELOAD=/tmp/fakeroot.so"
+    - !reference [.pest_base, before_script]
   script:
     - php --version
-    - composer --version
-    - composer install --no-interaction --prefer-dist --no-progress
     - LD_PRELOAD=/tmp/fakeroot.so FAKE_ROOT="$FAKE_ROOT" ./vendor/bin/pest --testsuite=Integration --colors=always --ci --log-junit=junit-integration.xml --coverage-php=coverage-integration.cov
   artifacts:
     when: always
@@ -92,23 +120,24 @@ pest:integration:
 
 coverage:merge:
   stage: test
-  image: thecodingmachine/php:8.5-v5-cli@sha256:42215b1a124696a0c5050e68401eb20e168e511d21830f4dfcf1c096beafdb10
+  image: $PHP_IMAGE
   needs: [pest:unit, pest:integration]
   variables:
     PHP_EXTENSION_PCOV: "1"
   cache:
-    key: "$CI_COMMIT_REF_SLUG"
+    key:
+      files:
+        - composer.lock
     paths:
       - vendor/
     policy: pull
   coverage: '/Total:\s*\d+\.\d+\s*%/'
+  before_script: !reference [.php-base, before_script]
   script:
     - php --version
-    - composer install --no-interaction --prefer-dist --no-progress
     - ls -lh coverage-unit.cov coverage-integration.cov || (echo "missing coverage" && exit 1)
     - mkdir -p build/coverage && cp coverage-unit.cov build/coverage/unit.cov && cp coverage-integration.cov build/coverage/integration.cov
-    - wget -q https://phar.phpunit.de/phpcov.phar -O phpcov.phar
-    - php phpcov.phar merge --cobertura coverage.cobertura.xml --text coverage.txt build/coverage
+    - vendor/bin/phpcov merge --cobertura coverage.cobertura.xml --text coverage.txt build/coverage
     - cat coverage.txt
   artifacts:
     when: always

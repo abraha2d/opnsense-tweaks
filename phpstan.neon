@@ -1,0 +1,10 @@
+parameters:
+    level: 5
+    paths:
+        - src
+    bootstrapFiles:
+        - tests/Pest.php
+    excludePaths:
+        - vendor
+        - external
+    treatPhpDocTypesAsCertain: false

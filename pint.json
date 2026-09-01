@@ -1,0 +1,8 @@
+{
+    "preset": "per",
+    "exclude": [
+        "external",
+        "vendor",
+        "tools"
+    ]
+}

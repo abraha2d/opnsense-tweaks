@@ -1,13 +1,24 @@
+# Dependencies
 /vendor/
-.phpunit.cache/
+
+# PHPUnit / Pest
+/.phpunit.cache/
 junit.xml
 junit-*.xml
+
+# Coverage
 coverage.cobertura.xml
 coverage.xml
 coverage-*.cov
 coverage-*.php
 /build/
 /coverage-html/
-phpcov.phar
-fakeroot.so
+
+# Build
+/fakeroot.so
 .dhcpcarp_peer
+
+# Tools
+.php-cs-fixer.cache
+.php_cs.cache
+.phpstan.cache/
