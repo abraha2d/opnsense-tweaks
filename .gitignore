@@ -9,4 +9,5 @@ coverage-*.php
 /build/
 /coverage-html/
 phpcov.phar
+fakeroot.so
 .dhcpcarp_peer

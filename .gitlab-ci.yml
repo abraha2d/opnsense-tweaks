@@ -8,6 +8,7 @@ variables:
 php-lint:
   stage: test
   image: thecodingmachine/php:8.5-v5-cli@sha256:42215b1a124696a0c5050e68401eb20e168e511d21830f4dfcf1c096beafdb10
+  needs: []
   before_script:
     - git config --global --add safe.directory "$CI_PROJECT_DIR"
   script:
@@ -17,9 +18,26 @@ php-lint:
 shellcheck:
   stage: test
   image: koalaman/shellcheck-alpine:stable@sha256:c82fe42504fbc9fc68f15d36638e5ee2324ebb8b94e96a3c4e395bf361c49183
+  needs: []
   script:
     - shellcheck --version
     - find . \( -path ./external -prune -o -path ./vendor -prune -o -path ./.git -prune \) -o -type f -exec grep -l '^#!/.*sh' {} \; | xargs -r shellcheck
+
+build:fakeroot:
+  stage: test
+  image: gcc:14-bookworm
+  needs: []
+  script:
+    - gcc --version
+    - gcc -shared -fPIC -o fakeroot.so -ldl tools/fakeroot.c
+    - ls -lh fakeroot.so
+    - file fakeroot.so
+    - ldd fakeroot.so || true
+  artifacts:
+    when: always
+    expire_in: 1 week
+    paths:
+      - fakeroot.so
 
 .pest_base: &pest_base
   stage: test
@@ -33,6 +51,7 @@ shellcheck:
 
 pest:unit:
   <<: *pest_base
+  needs: []
   script:
     - php --version
     - composer --version
@@ -48,9 +67,13 @@ pest:unit:
 
 pest:integration:
   <<: *pest_base
+  needs:
+    - job: build:fakeroot
+      artifacts: true
   before_script:
-    - gcc --version
-    - gcc -shared -fPIC -o /tmp/fakeroot.so -ldl tools/fakeroot.c
+    - ls -lh fakeroot.so || (echo "fakeroot.so artifact missing from build:fakeroot" && exit 1)
+    - cp fakeroot.so /tmp/fakeroot.so
+    - chmod 755 /tmp/fakeroot.so
     - export FAKE_ROOT=$(mktemp -d)
     - mkdir -p "$FAKE_ROOT/var/run/dhcpcd" "$FAKE_ROOT/var/db/dhcpcd" "$FAKE_ROOT/conf" "$FAKE_ROOT/usr/local/etc" "$FAKE_ROOT/root/opnsense-tweaks"
     - echo "FAKE_ROOT=$FAKE_ROOT LD_PRELOAD=/tmp/fakeroot.so"
