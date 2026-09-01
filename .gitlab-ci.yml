@@ -21,7 +21,7 @@ shellcheck:
     - shellcheck --version
     - find . \( -path ./external -prune -o -path ./vendor -prune -o -path ./.git -prune \) -o -type f -exec grep -l '^#!/.*sh' {} \; | xargs -r shellcheck
 
-pest:
+.pest_base: &pest_base
   stage: test
   image: thecodingmachine/php:8.5-v5-cli@sha256:42215b1a124696a0c5050e68401eb20e168e511d21830f4dfcf1c096beafdb10
   variables:
@@ -30,18 +30,72 @@ pest:
     key: "$CI_COMMIT_REF_SLUG"
     paths:
       - vendor/
-  coverage: '/Total:\s*\d+\.\d+\s*%/'
+
+pest:unit:
+  <<: *pest_base
   script:
     - php --version
     - composer --version
     - composer install --no-interaction --prefer-dist --no-progress
-    - ./vendor/bin/pest --colors=always --ci --log-junit=junit.xml --coverage --coverage-cobertura=coverage.cobertura.xml
+    - ./vendor/bin/pest --testsuite=Unit --colors=always --ci --log-junit=junit-unit.xml --coverage-php=coverage-unit.cov
   artifacts:
     when: always
     reports:
-      junit: junit.xml
+      junit: junit-unit.xml
+    paths:
+      - coverage-unit.cov
+      - junit-unit.xml
+
+pest:integration:
+  <<: *pest_base
+  before_script:
+    - gcc --version
+    - gcc -shared -fPIC -o /tmp/fakeroot.so -ldl tools/fakeroot.c
+    - export FAKE_ROOT=$(mktemp -d)
+    - mkdir -p "$FAKE_ROOT/var/run/dhcpcd" "$FAKE_ROOT/var/db/dhcpcd" "$FAKE_ROOT/conf" "$FAKE_ROOT/usr/local/etc" "$FAKE_ROOT/root/opnsense-tweaks"
+    - echo "FAKE_ROOT=$FAKE_ROOT LD_PRELOAD=/tmp/fakeroot.so"
+  script:
+    - php --version
+    - composer --version
+    - composer install --no-interaction --prefer-dist --no-progress
+    - LD_PRELOAD=/tmp/fakeroot.so FAKE_ROOT="$FAKE_ROOT" ./vendor/bin/pest --testsuite=Integration --colors=always --ci --log-junit=junit-integration.xml --coverage-php=coverage-integration.cov
+  artifacts:
+    when: always
+    reports:
+      junit: junit-integration.xml
+    paths:
+      - coverage-integration.cov
+      - junit-integration.xml
+
+coverage:merge:
+  stage: test
+  image: thecodingmachine/php:8.5-v5-cli@sha256:42215b1a124696a0c5050e68401eb20e168e511d21830f4dfcf1c096beafdb10
+  needs: [pest:unit, pest:integration]
+  variables:
+    PHP_EXTENSION_PCOV: "1"
+  cache:
+    key: "$CI_COMMIT_REF_SLUG"
+    paths:
+      - vendor/
+    policy: pull
+  coverage: '/Total:\s*\d+\.\d+\s*%/'
+  script:
+    - php --version
+    - composer install --no-interaction --prefer-dist --no-progress
+    - ls -lh coverage-unit.cov coverage-integration.cov || (echo "missing coverage" && exit 1)
+    - mkdir -p build/coverage && cp coverage-unit.cov build/coverage/unit.cov && cp coverage-integration.cov build/coverage/integration.cov
+    - wget -q https://phar.phpunit.de/phpcov.phar -O phpcov.phar
+    - php phpcov.phar merge --cobertura coverage.cobertura.xml --text coverage.txt build/coverage
+    - cat coverage.txt
+  artifacts:
+    when: always
+    reports:
+      junit:
+        - junit-unit.xml
+        - junit-integration.xml
       coverage_report:
         coverage_format: cobertura
         path: coverage.cobertura.xml
     paths:
       - coverage.cobertura.xml
+      - coverage.txt

@@ -298,7 +298,28 @@ if (!function_exists("test_reset_globals")) {
     test_reset_globals();
 }
 
+// Helpers for Integration tests via LD_PRELOAD fake root
+if (!function_exists('test_make_fake_root')) {
+    function test_make_fake_root(?string $base = null): string {
+        $base ??= sys_get_temp_dir() . '/fake_root_' . bin2hex(random_bytes(4));
+        foreach (["/var/run/dhcpcd","/var/db/dhcpcd","/conf","/usr/local/etc","/root/opnsense-tweaks"] as $p) {
+            $dir = $base.$p;
+            @exec("mkdir -p ".escapeshellarg($dir));
+        }
+        if (!is_file($base."/conf/config.xml")) @file_put_contents($base."/conf/config.xml", '<opnsense><hasync><synchronizetoip/></hasync></opnsense>');
+        if (!is_file($base."/usr/local/etc/config.xml")) @file_put_contents($base."/usr/local/etc/config.xml", '<opnsense/>');
+        putenv("FAKE_ROOT=$base"); $_ENV['FAKE_ROOT']=$base; $_SERVER['FAKE_ROOT']=$base;
+        return $base;
+    }
+    function test_cleanup_fake_root(string $base): void {
+        putenv('FAKE_ROOT'); unset($_ENV['FAKE_ROOT'], $_SERVER['FAKE_ROOT']);
+        @exec("rm -rf ".escapeshellarg($base));
+    }
+}
+
 // Pest expects (only when run via pest runner)
 if (function_exists('uses')) {
     uses()->beforeEach(function(){ test_reset_globals(); })->in("Unit");
+    uses()->beforeEach(function(){ test_reset_globals(); })->in("Integration");
+    uses()->group('integration')->in("Integration");
 }
