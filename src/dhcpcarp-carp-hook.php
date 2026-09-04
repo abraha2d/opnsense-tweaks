@@ -9,7 +9,7 @@ $argv = $_SERVER['argv'] ?? [];
 $subsystem = $argv[1] ?? '';
 $type = $argv[2] ?? '';
 
-if (!strstr($subsystem, '@')) {
+if (!str_contains($subsystem, '@')) {
     dhcpcarp_log_and_exit("CARP event '$type' triggered from wrong source '$subsystem'");
 }
 

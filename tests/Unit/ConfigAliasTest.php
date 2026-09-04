@@ -56,7 +56,7 @@ describe('dhcpcarp_apply_aliasData', function () {
         $node->setNodes(['content' => '9.9.9.9']);
         $aliasModel->serializeToConfig();
         // FakeField stores children as FakeField objects; verify child updated
-        expect((string)($stubNode->iterateItems()->current() ?? ''))->toBeString();
+        expect((string) ($stubNode->iterateItems()->current() ?? ''))->toBeString();
         expect($GLOBALS['_test_serialize_calls'])->toContain(Alias::class);
     });
 

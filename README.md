@@ -73,7 +73,7 @@ Refuses to run if the interface's CARP state is `BACKUP`.
 * **CARP hold/release failed** — The hook logs `failed to hold CARP on peer` / `failed to release`. Manual release: `ssh root@<peer_ip> 'sysctl net.inet.carp.allow=1'`.
 * **no eligible virtual IPs found** — No CARP virtual IP with description `<ifname> DHCP` exists, or mode is not `carp`.
 * **did not find VIP/gateway/alias/NPT for \<descr\>** — Description mismatch; see [Pre-configuration](#OPNsense-Pre-configuration).
-* **Peer unreachable** — Hook proceeds without hold/sync and logs `peer <ip> unreachable`. Verify mutual SSH key trust, host key acceptance, and that `.dhcpcarp_peer` contains the correct IP.
+* **Peer unreachable** — Hook proceeds without hold/sync and logs `peer <ip> unreachable`. Verify mutual SSH key trust, host key acceptance, and that `.dhcpcarp_peer` contains the correct IP. SSH keys are generated with an empty passphrase (`ssh-keygen -N ''`) so `ssh -o BatchMode=yes` can run non-interactively.
 * **Lease not updating** — Confirm `dhcpcd` is running: `cat /var/run/dhcpcd/<interface>.pid` and `ps aux | grep dhcpcd`. Use `src/dhcpcarp-renew.php wan --reset` to force a cold restart.
 
 

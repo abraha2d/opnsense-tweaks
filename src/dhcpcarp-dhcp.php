@@ -3,6 +3,12 @@
 require_once(__DIR__ . '/dhcpcarp-common.php');
 require_once(__DIR__ . '/dhcpcarp-interfaces.php');
 
+function dhcpcarp_is_dhcpcd_running(string $interface): bool
+{
+    $pidFile = "/var/run/dhcpcd/{$interface}.pid";
+    return file_exists($pidFile) && trim(@file_get_contents($pidFile)) !== '';
+}
+
 function dhcpcarp_start_dhcpcd(string $interface, ?int $vhid = null): bool
 {
     dhcpcarp_set_carp_mac($interface, $vhid);
@@ -20,7 +26,7 @@ function dhcpcarp_start_dhcpcd(string $interface, ?int $vhid = null): bool
 function dhcpcarp_stop_dhcpcd(string $interface): void
 {
     $pidFile = "/var/run/dhcpcd/{$interface}.pid";
-    $running = file_exists($pidFile) && trim(@file_get_contents($pidFile)) !== '';
+    $running = dhcpcarp_is_dhcpcd_running($interface);
 
     if ($running) {
         dhcpcarp_log("stopping dhcpcd on interface '$interface'");

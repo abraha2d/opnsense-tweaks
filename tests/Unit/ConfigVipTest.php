@@ -90,7 +90,7 @@ describe('dhcpcarp_apply_vipData', function () {
         // The model instance inside apply_vipData creates a new Vip(); its getNodeByReference should resolve
         // via static items. Our FakeVipItem was mutated via setNodes.
         // Verify via the static item still reflects update
-        expect((string)$item->testChildren['subnet'])->toBe('9.9.9.9');
+        expect((string) $item->testChildren['subnet'])->toBe('9.9.9.9');
         expect($GLOBALS['_test_serialize_calls'])->toContain(Vip::class);
     });
 

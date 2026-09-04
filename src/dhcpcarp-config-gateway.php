@@ -45,15 +45,8 @@ function dhcpcarp_apply_gatewayData(array $gwData): void
     }
 
     $gateways = new \OPNsense\Routing\Gateways();
-    $found = false;
-    foreach ($gateways->gatewayIterator() as $id => $item) {
-        if ((string) $item['uuid'] === $gwUuid) {
-            $found = true;
-            break;
-        }
-    }
-
-    if ($found) {
+    $node = $gateways->getNodeByReference("gateways.gateway.$gwUuid");
+    if ($node !== null) {
         $gateways->createOrUpdateGateway(['gateway' => $gwAddr], $gwUuid);
         dhcpcarp_log("updated gateway to $gwAddr");
     } else {

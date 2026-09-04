@@ -51,7 +51,7 @@ lint:format:
   needs: []
   script:
     - php --version
-    - vendor/bin/pint --test src
+    - vendor/bin/pint --test
 
 analyse:phpstan:
   extends: .php-base
@@ -80,8 +80,6 @@ pest:integration:
   <<: *pest_base
   stage: test
   needs: []
-  before_script:
-    - !reference [.pest_base, before_script]
   script:
     - php --version
     - tools/fake-root.sh ./vendor/bin/pest --testsuite=Integration --colors=always --ci --log-junit=junit-integration.xml --coverage-php=coverage-integration.cov
@@ -95,10 +93,8 @@ pest:integration:
 
 coverage:merge:
   stage: test
-  image: $PHP_IMAGE
+  extends: .php-base
   needs: [pest:unit, pest:integration]
-  variables:
-    PHP_EXTENSION_PCOV: "1"
   cache:
     key:
       files:

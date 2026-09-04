@@ -20,7 +20,7 @@ if [ -n "$PEER_IP" ]; then
 
   if [ ! -f /root/.ssh/id_ed25519 ]; then
     echo "Generating SSH key..." >&2
-    ssh-keygen -t ed25519 -f /root/.ssh/id_ed25519
+    ssh-keygen -t ed25519 -f /root/.ssh/id_ed25519 -N ''
   fi
 
   echo "Copying SSH key to peer..."

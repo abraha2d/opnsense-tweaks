@@ -12,6 +12,5 @@ describe('dhcpcarp_apply_config with real config.xml via FAKE_ROOT', function ()
         expect(file_exists('/conf/config.xml'))->toBeTrue();
         expect(file_exists('/usr/local/etc/config.xml'))->toBeTrue();
         $fr->cleanup();
-        expect(true)->toBeTrue();
     })->group('integration');
 });

@@ -9,57 +9,108 @@
 
 // --- Global function stubs (must exist before config.inc etc. is loaded) ---
 if (!function_exists('log_error')) {
-    function log_error($msg) { /* capture in $GLOBALS for assertions if needed */ $GLOBALS['_test_log'][] = $msg; }
+    function log_error($msg)
+    { /* capture in $GLOBALS for assertions if needed */ $GLOBALS['_test_log'][] = $msg;
+    }
 }
 if (!function_exists('write_config')) {
-    function write_config($desc = '', $backup = true) { $GLOBALS['_test_write_config_calls'][] = $desc; return true; }
+    function write_config($desc = '', $backup = true)
+    {
+        $GLOBALS['_test_write_config_calls'][] = $desc;
+        return true;
+    }
 }
 if (!function_exists('system_routing_configure')) {
-    function system_routing_configure($verbose = false, $interface_map = null, $monitor = true, $family = null) { $GLOBALS['_test_system_routing_calls'][] = func_get_args(); return true; }
+    function system_routing_configure($verbose = false, $interface_map = null, $monitor = true, $family = null)
+    {
+        $GLOBALS['_test_system_routing_calls'][] = func_get_args();
+        return true;
+    }
 }
 if (!function_exists('filter_configure')) {
-    function filter_configure() { $GLOBALS['_test_filter_configure_calls'][] = true; return true; }
+    function filter_configure()
+    {
+        $GLOBALS['_test_filter_configure_calls'][] = true;
+        return true;
+    }
 }
 if (!function_exists('plugins_configure')) {
-    function plugins_configure($hook, $verbose = false, $args = []) { $GLOBALS['_test_plugins_configure_calls'][] = $hook; return true; }
+    function plugins_configure($hook, $verbose = false, $args = [])
+    {
+        $GLOBALS['_test_plugins_configure_calls'][] = $hook;
+        return true;
+    }
 }
 if (!function_exists('configd_run')) {
-    function configd_run($cmd, $detach = false) { $GLOBALS['_test_configd_run_calls'][] = $cmd; return true; }
+    function configd_run($cmd, $detach = false)
+    {
+        $GLOBALS['_test_configd_run_calls'][] = $cmd;
+        return true;
+    }
 }
 if (!function_exists('get_real_interface')) {
-    function get_real_interface($iface = 'wan', $family = 'all') { return $GLOBALS['_test_real_interface_map'][$iface] ?? $iface; }
+    function get_real_interface($iface = 'wan', $family = 'all')
+    {
+        return $GLOBALS['_test_real_interface_map'][$iface] ?? $iface;
+    }
 }
 if (!function_exists('convert_real_interface_to_friendly_interface_name')) {
-    function convert_real_interface_to_friendly_interface_name($interface = 'wan') {
+    function convert_real_interface_to_friendly_interface_name($interface = 'wan')
+    {
         $map = $GLOBALS['_test_friendly_map'] ?? [];
-        if (isset($map[$interface])) { return $map[$interface]; }
+        if (isset($map[$interface])) {
+            return $map[$interface];
+        }
         // fallback: reverse lookup via real_interface_map
         foreach (($GLOBALS['_test_real_interface_map'] ?? []) as $friendly => $real) {
-            if ($real === $interface) { return $friendly; }
+            if ($real === $interface) {
+                return $friendly;
+            }
         }
         return $interface;
     }
 }
 if (!function_exists('get_interface_ip')) {
-    function get_interface_ip($iface) { return $GLOBALS['_test_interface_ip_map'][$iface] ?? ''; }
+    function get_interface_ip($iface)
+    {
+        return $GLOBALS['_test_interface_ip_map'][$iface] ?? '';
+    }
 }
 if (!function_exists('interface_vip_bring_down')) {
-    function interface_vip_bring_down($vip) { $GLOBALS['_test_vip_bring_down'][] = $vip; }
+    function interface_vip_bring_down($vip)
+    {
+        $GLOBALS['_test_vip_bring_down'][] = $vip;
+    }
 }
 if (!function_exists('interface_carp_configure')) {
-    function interface_carp_configure($vip) { $GLOBALS['_test_carp_configure'][] = $vip; }
+    function interface_carp_configure($vip)
+    {
+        $GLOBALS['_test_carp_configure'][] = $vip;
+    }
 }
 if (!function_exists('interface_ipalias_configure')) {
-    function interface_ipalias_configure($vip) { $GLOBALS['_test_ipalias_configure'][] = $vip; }
+    function interface_ipalias_configure($vip)
+    {
+        $GLOBALS['_test_ipalias_configure'][] = $vip;
+    }
 }
 if (!function_exists('listtags')) {
-    function listtags() { return []; }
+    function listtags()
+    {
+        return [];
+    }
 }
 if (!function_exists('shell_safe')) {
-    function shell_safe($fmt, ...$args) { return vsprintf($fmt, array_map('escapeshellarg', $args)); }
+    function shell_safe($fmt, ...$args)
+    {
+        return vsprintf($fmt, array_map('escapeshellarg', $args));
+    }
 }
 if (!function_exists('legacy_config_get_interfaces')) {
-    function legacy_config_get_interfaces($filters = [], $exclude = []) { return []; }
+    function legacy_config_get_interfaces($filters = [], $exclude = [])
+    {
+        return [];
+    }
 }
 
 // --- OPNsense\Core\Config stub (Singleton) ---
@@ -197,6 +248,19 @@ if (!class_exists('OPNsense\Routing\Gateways')) {
             // fallback empty
             return; yield from [];
         }
+        public function getNodeByReference($ref) {
+            if (isset($this->testGetNodeMap[$ref])) { return $this->testGetNodeMap[$ref]; }
+            if (str_starts_with($ref, "gateways.gateway.")) {
+                $uuid = substr($ref, strlen("gateways.gateway."));
+                if (static::$testGatewayRecords !== null) {
+                    foreach (static::$testGatewayRecords as $rec) {
+                        if (($rec["uuid"] ?? "") === $uuid) { return new \stdClass(); }
+                    }
+                }
+                return null;
+            }
+            return parent::getNodeByReference($ref);
+        }
         public function createOrUpdateGateway($fields, $uuid) { $GLOBALS["_test_gateway_create"][] = [$fields,$uuid]; }
     }
     ');
@@ -266,7 +330,8 @@ if (is_dir($incStubDir)) {
 
 // Helper to reset global state between tests
 if (!function_exists("test_reset_globals")) {
-    function test_reset_globals() {
+    function test_reset_globals()
+    {
         $GLOBALS["_test_log"] = [];
         $GLOBALS["_test_write_config_calls"] = [];
         $GLOBALS["_test_system_routing_calls"] = [];
@@ -282,7 +347,9 @@ if (!function_exists("test_reset_globals")) {
         $GLOBALS["_test_friendly_map"] = [];
         $GLOBALS["_test_interface_ip_map"] = [];
         unset($GLOBALS["_dhcpcarp_interfaces_cache"]);
-        if (function_exists("dhcpcarp_interfaces_clear_cache")) { dhcpcarp_interfaces_clear_cache(); }
+        if (function_exists("dhcpcarp_interfaces_clear_cache")) {
+            dhcpcarp_interfaces_clear_cache();
+        }
         // reset singletons
         \OPNsense\Core\Config::reset();
         \OPNsense\Interfaces\Vip::$testIterateItems = [];
@@ -290,7 +357,10 @@ if (!function_exists("test_reset_globals")) {
         \OPNsense\Firewall\Alias::$testAliasItems = null;
         \OPNsense\Firewall\Filter::$testNptItems = null;
         // clear env DHCPv6 prefixes (up to 20 to avoid cross-test leaks)
-        for ($i=1;$i<=20;$i++) { putenv("new_dhcp6_ia_pd1_prefix{$i}"); putenv("new_dhcp6_ia_pd1_prefix{$i}_length"); }
+        for ($i = 1;$i <= 20;$i++) {
+            putenv("new_dhcp6_ia_pd1_prefix{$i}");
+            putenv("new_dhcp6_ia_pd1_prefix{$i}_length");
+        }
         putenv("new_dhcp6_ia_na1_ia_addr1");
         putenv("nd1_prefix_information1_length");
         putenv("nd1_from");
@@ -300,7 +370,8 @@ if (!function_exists("test_reset_globals")) {
 
 // Helpers for Integration tests via mount namespace fake root (tools/fake-root.sh)
 if (!function_exists('test_make_fake_root')) {
-    function test_make_fake_root(?string $base = null): string {
+    function test_make_fake_root(?string $base = null): string
+    {
         // In mount namespace mode (tools/fake-root.sh), FAKE_ROOT is already set and
         // bind-mounted to real paths. Reuse the global mount instead of creating
         // per-test isolated roots, otherwise file_exists('/var/run/dhcpcd/...')
@@ -309,24 +380,35 @@ if (!function_exists('test_make_fake_root')) {
         if ($base === null && $existing !== false && $existing !== '' && is_dir($existing)) {
             // Ensure structure exists in the global mount
             foreach (["/var/run/dhcpcd","/var/db/dhcpcd","/conf","/usr/local/etc","/root/opnsense-tweaks"] as $p) {
-                $dir = $existing.$p;
-                @exec("mkdir -p ".escapeshellarg($dir));
+                $dir = $existing . $p;
+                @exec("mkdir -p " . escapeshellarg($dir));
             }
-            if (!is_file($existing."/conf/config.xml")) @file_put_contents($existing."/conf/config.xml", '<opnsense><hasync><synchronizetoip/></hasync></opnsense>');
-            if (!is_file($existing."/usr/local/etc/config.xml")) @file_put_contents($existing."/usr/local/etc/config.xml", '<opnsense/>');
+            if (!is_file($existing . "/conf/config.xml")) {
+                @file_put_contents($existing . "/conf/config.xml", '<opnsense><hasync><synchronizetoip/></hasync></opnsense>');
+            }
+            if (!is_file($existing . "/usr/local/etc/config.xml")) {
+                @file_put_contents($existing . "/usr/local/etc/config.xml", '<opnsense/>');
+            }
             return $existing;
         }
         $base ??= sys_get_temp_dir() . '/fake_root_' . bin2hex(random_bytes(4));
         foreach (["/var/run/dhcpcd","/var/db/dhcpcd","/conf","/usr/local/etc","/root/opnsense-tweaks"] as $p) {
-            $dir = $base.$p;
-            @exec("mkdir -p ".escapeshellarg($dir));
+            $dir = $base . $p;
+            @exec("mkdir -p " . escapeshellarg($dir));
         }
-        if (!is_file($base."/conf/config.xml")) @file_put_contents($base."/conf/config.xml", '<opnsense><hasync><synchronizetoip/></hasync></opnsense>');
-        if (!is_file($base."/usr/local/etc/config.xml")) @file_put_contents($base."/usr/local/etc/config.xml", '<opnsense/>');
-        putenv("FAKE_ROOT=$base"); $_ENV['FAKE_ROOT']=$base; $_SERVER['FAKE_ROOT']=$base;
+        if (!is_file($base . "/conf/config.xml")) {
+            @file_put_contents($base . "/conf/config.xml", '<opnsense><hasync><synchronizetoip/></hasync></opnsense>');
+        }
+        if (!is_file($base . "/usr/local/etc/config.xml")) {
+            @file_put_contents($base . "/usr/local/etc/config.xml", '<opnsense/>');
+        }
+        putenv("FAKE_ROOT=$base");
+        $_ENV['FAKE_ROOT'] = $base;
+        $_SERVER['FAKE_ROOT'] = $base;
         return $base;
     }
-    function test_cleanup_fake_root(string $base): void {
+    function test_cleanup_fake_root(string $base): void
+    {
         // Don't delete the global mount root - it is the bind source for /conf etc.
         $existing = getenv('FAKE_ROOT');
         // If $base is the global mount, just clean test files, don't rm global
@@ -340,7 +422,8 @@ if (!function_exists('test_make_fake_root')) {
         // Also handle case where test reused global but putenv wasn't updated:
         // if $base equals the initial global from fake-root.sh (check via FAKE_ROOT env before overwrite)
         // The above already covers, otherwise proceed to normal cleanup
-        putenv('FAKE_ROOT'); unset($_ENV['FAKE_ROOT'], $_SERVER['FAKE_ROOT']);
+        putenv('FAKE_ROOT');
+        unset($_ENV['FAKE_ROOT'], $_SERVER['FAKE_ROOT']);
         $tmp = sys_get_temp_dir();
         // safety: only remove paths inside temp dir and not empty/root
         if ($base === '' || $base === '/' || $base === $tmp) {
@@ -349,13 +432,17 @@ if (!function_exists('test_make_fake_root')) {
         if (!str_starts_with($base, $tmp . '/') && $base !== $tmp) {
             return;
         }
-        @exec("rm -rf ".escapeshellarg($base));
+        @exec("rm -rf " . escapeshellarg($base));
     }
 }
 
 // Pest expects (only when run via pest runner) — guard for phpstan/other tools
 if (function_exists('uses') && isset($_SERVER['argv'][0]) && str_contains((string) $_SERVER['argv'][0], 'pest')) {
-    uses()->beforeEach(function(){ test_reset_globals(); })->in("Unit");
-    uses()->beforeEach(function(){ test_reset_globals(); })->in("Integration");
+    uses()->beforeEach(function () {
+        test_reset_globals();
+    })->in("Unit");
+    uses()->beforeEach(function () {
+        test_reset_globals();
+    })->in("Integration");
     uses()->group('integration')->in("Integration");
 }

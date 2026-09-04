@@ -19,10 +19,14 @@ describe('dhcpcarp_get_peer_ip', function () {
         $obj->hasync->synchronizetoip = '';
         Config::getInstance()->objectData = $obj;
         $f = __DIR__ . '/../../.dhcpcarp_peer';
-        if (file_exists($f)) { unlink($f); }
+        if (file_exists($f)) {
+            unlink($f);
+        }
         file_put_contents($f, "10.0.0.2\n");
         expect(dhcpcarp_get_peer_ip())->toBe('10.0.0.2');
-        if (file_exists($f)) { unlink($f); }
+        if (file_exists($f)) {
+            unlink($f);
+        }
     });
 
     it('returns null when neither config nor file valid', function () {
@@ -31,11 +35,15 @@ describe('dhcpcarp_get_peer_ip', function () {
         $obj->hasync->synchronizetoip = '';
         Config::getInstance()->objectData = $obj;
         $f = __DIR__ . '/../../.dhcpcarp_peer';
-        if (file_exists($f)) { unlink($f); }
+        if (file_exists($f)) {
+            unlink($f);
+        }
         expect(dhcpcarp_get_peer_ip())->toBeNull();
         file_put_contents($f, "not-an-ip\n");
         expect(dhcpcarp_get_peer_ip())->toBeNull();
-        if (file_exists($f)) { unlink($f); }
+        if (file_exists($f)) {
+            unlink($f);
+        }
     });
 
     it('rejects invalid IP in config', function () {
@@ -44,7 +52,9 @@ describe('dhcpcarp_get_peer_ip', function () {
         $obj->hasync->synchronizetoip = 'not-an-ip';
         Config::getInstance()->objectData = $obj;
         $f = __DIR__ . '/../../.dhcpcarp_peer';
-        if (file_exists($f)) { unlink($f); }
+        if (file_exists($f)) {
+            unlink($f);
+        }
         expect(dhcpcarp_get_peer_ip())->toBeNull();
     });
 });

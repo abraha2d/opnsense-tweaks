@@ -11,9 +11,6 @@
         "laravel/pint": "^1.24",
         "phpstan/phpstan": "^2.2"
     },
-    "autoload": {
-        "files": []
-    },
     "autoload-dev": {
         "psr-4": {
             "Tests\\": "tests/"
@@ -30,6 +27,5 @@
         "allow-plugins": {
             "pestphp/pest-plugin": true
         }
-    },
-    "minimum-stability": "stable"
+    }
 }

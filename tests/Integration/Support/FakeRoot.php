@@ -25,7 +25,9 @@ class FakeRoot
     public function put(string $abs, string $content): void
     {
         $dir = dirname($this->path($abs));
-        if (!is_dir($dir)) @mkdir($dir, 0777, true);
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0777, true);
+        }
         file_put_contents($this->path($abs), $content);
         $this->created[] = $abs;
     }

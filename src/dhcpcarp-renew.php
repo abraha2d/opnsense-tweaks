@@ -25,8 +25,7 @@ function usage($msg = null)
 
 function dhcpcarp_renew($iface, $mode)
 {
-    $pidFile = "/var/run/dhcpcd/{$iface}.pid";
-    $running = file_exists($pidFile) && trim(@file_get_contents($pidFile)) !== '';
+    $running = dhcpcarp_is_dhcpcd_running($iface);
 
     if ($mode === 'renew') {
         if ($running) {

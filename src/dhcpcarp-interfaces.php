@@ -32,7 +32,7 @@ function dhcpcarp_interfaces(): array
         }
     }
 
-    $list = array_values(array_unique($list));
+    $list = array_unique($list);
     sort($list);
 
     if (empty($list)) {
@@ -77,11 +77,9 @@ function dhcpcarp_get_address_request(string $iface): string
 
 function dhcpcarp_get_vhid($iface)
 {
-    $out = shell_exec("ifconfig " . escapeshellarg($iface) . " 2>&1 | grep -o 'vhid [0-9]*' | head -1");
-    if ($out) {
-        if (preg_match('/vhid\s+(\d+)/', $out, $m)) {
-            return (int) $m[1];
-        }
+    $out = shell_exec("ifconfig " . escapeshellarg($iface) . " 2>&1");
+    if ($out && preg_match('/vhid\s+(\d+)/', $out, $m)) {
+        return (int) $m[1];
     }
     return null;
 }
@@ -114,8 +112,9 @@ function dhcpcarp_set_carp_mac(string $iface, ?int $vhid = null): void
 function dhcpcarp_restore_mac(string $iface): void
 {
     // hwaddr appears only if custom MAC address set
-    if (!empty(shell_exec("ifconfig " . escapeshellarg($iface) . " | grep hwaddr"))) {
-        $mac = rtrim(shell_exec("ifconfig " . escapeshellarg($iface) . " | grep hwaddr | cut -d' ' -f2"));
+    $out = shell_exec("ifconfig " . escapeshellarg($iface) . " 2>&1");
+    if ($out !== null && preg_match('/hwaddr\s+(\S+)/', $out, $m)) {
+        $mac = trim($m[1]);
         if ($mac !== '') {
             dhcpcarp_log("restoring '$iface' MAC address to '$mac'");
             dhcpcarp_exec("ifconfig " . escapeshellarg($iface) . " ether " . escapeshellarg($mac));

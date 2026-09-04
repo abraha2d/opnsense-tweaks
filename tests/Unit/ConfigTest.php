@@ -28,7 +28,7 @@ describe('dhcpcarp_apply_config', function () {
 
         dhcpcarp_apply_config($data, false);
 
-        expect((string)$vipItem->testChildren['subnet'])->toBe('9.9.9.9');
+        expect((string) $vipItem->testChildren['subnet'])->toBe('9.9.9.9');
         expect($GLOBALS['_test_gateway_create'])->toContain([['gateway' => '9.9.9.1'], 'gw-uuid-1']);
         // when do_configure false, system routing/filter should not be called
         expect($GLOBALS['_test_system_routing_calls'])->toBe([]);

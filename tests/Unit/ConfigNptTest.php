@@ -90,16 +90,9 @@ describe('dhcpcarp_find_npt', function () {
 
 describe('dhcpcarp_apply_nptData', function () {
     it('applies multiple npt rules', function () {
-        $f1 = new Tests\Stubs\FakeField('', [], ['destination_net' => new Tests\Stubs\FakeField('old')]);
-        $f2 = new Tests\Stubs\FakeField('', [], ['destination_net' => new Tests\Stubs\FakeField('old2')]);
-        // We need to inject nodes via Filter stub's testGetNodeMap — but apply creates new Filter each call.
-        // Our Filter stub checks testGetNodeMap, so we set up a Filter instance that will be used?
-        // Instead test that it serializes at least once and logs.
         Filter::$testNptItems = [
             new FakeVipItem(['description' => 'wan DHCPv6 prefix 1', 'destination_net' => 'old::/56', 'uuid' => 'npt-uuid-1']),
         ];
-        // Mock Filter::getNodeByReference to return our fake field via global override not trivial.
-        // So just verify that apply with empty uuid is skipped and with valid uuid attempts lookup
         dhcpcarp_apply_nptData([
             ['uuid' => '', 'destination_net' => '2001:db8::/56'],
         ]);

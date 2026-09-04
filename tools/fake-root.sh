@@ -9,10 +9,7 @@ set -eu
 # Resolve FAKE_ROOT - use env if set, otherwise create temp dir
 if [ -z "${FAKE_ROOT:-}" ]; then
     FAKE_ROOT=$(mktemp -d)
-    # Auto-cleanup only for auto-created roots; caller-provided roots are left for caller to clean
-    AUTO_FAKE_ROOT=1
-else
-    AUTO_FAKE_ROOT=0
+    trap 'rm -rf "$FAKE_ROOT"' EXIT INT TERM
 fi
 export FAKE_ROOT
 
