@@ -28,18 +28,33 @@ if [ $# -eq 0 ]; then
     exit 1
 fi
 
+# Ensure host mount points exist before entering user ns (inside ns host root appears as 65534, sudo broken)
+for d in /var/run/dhcpcd /var/db/dhcpcd /conf /usr/local/etc; do
+    if [ ! -d "$d" ]; then
+        mkdir -p "$d" 2>&1 || sudo -n mkdir -p "$d" 2>&1 || {
+            echo "[fake-root] error: cannot create host mount point $d (need sudo/CAP_DAC_OVERRIDE)" >&2
+            exit 1
+        }
+    fi
+done
+# Handle /var/run -> /run symlink on PHP_IMAGE
+if [ -L /var/run ] && [ ! -d /run/dhcpcd ]; then
+    mkdir -p /run/dhcpcd 2>&1 || sudo -n mkdir -p /run/dhcpcd 2>&1 || true
+fi
+if [ ! -d /root/opnsense-tweaks ]; then
+    mkdir -p /root/opnsense-tweaks 2>&1 || sudo -n mkdir -p /root/opnsense-tweaks 2>&1 || echo "[fake-root] warn: host /root not writable, will skip bind" >&2
+fi
+
 # Execute in private mount namespace with bind mounts (user+mount ns via -r avoids privileged runner)
 # shellcheck disable=SC2016
 exec unshare -r -m --propagation private -- sh -c '
     FAKE_ROOT="$1"
     shift
-    mkdir -p /var/run/dhcpcd /var/db/dhcpcd /conf /usr/local/etc 2>/dev/null || true
-    mkdir -p /root/opnsense-tweaks 2>/dev/null || echo "[fake-root] warn: cannot mkdir /root/opnsense-tweaks (550, idmapped root)" >&2
     mount --bind "$FAKE_ROOT/var/run/dhcpcd" /var/run/dhcpcd
     mount --bind "$FAKE_ROOT/var/db/dhcpcd" /var/db/dhcpcd
     mount --bind "$FAKE_ROOT/conf" /conf
     mount --bind "$FAKE_ROOT/usr/local/etc" /usr/local/etc
-    if [ -d /root/opnsense-tweaks ]; then
+    if [ -d /root/opnsense-tweaks ] && [ -d "$FAKE_ROOT/root/opnsense-tweaks" ]; then
         mount --bind "$FAKE_ROOT/root/opnsense-tweaks" /root/opnsense-tweaks 2>/dev/null || echo "[fake-root] warn: cannot bind /root/opnsense-tweaks" >&2
     fi
     exec "$@"
