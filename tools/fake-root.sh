@@ -29,21 +29,31 @@ if [ $# -eq 0 ]; then
 fi
 
 # Ensure host mount points exist before entering user ns (inside ns host root appears as 65534, sudo broken)
+echo "[fake-root] host: uid=$(id -u) stat_root=$(stat -c %u:%U / 2>&1) uid_map=$(cat /proc/self/uid_map 2>&1 | tr '\n' ';') ls_root=$(ls -ld / 2>&1 | head -1); ls_var=$(ls -ld /var /run 2>&1 | tr '\n' ';')" >&2
 for d in /var/run/dhcpcd /var/db/dhcpcd /conf /usr/local/etc; do
     if [ ! -d "$d" ]; then
+        echo "[fake-root] creating host $d (exists=$(ls -ld $(dirname "$d") 2>&1 | head -1))" >&2
         mkdir -p "$d" 2>&1 || sudo -n mkdir -p "$d" 2>&1 || {
-            echo "[fake-root] error: cannot create host mount point $d (need sudo/CAP_DAC_OVERRIDE)" >&2
+            echo "[fake-root] error: cannot create host mount point $d (need sudo/CAP_DAC_OVERRIDE) uid=$(id -u) stat_parent=$(stat -c %a:%u:%U $(dirname "$d") 2>&1)" >&2
             exit 1
         }
     fi
 done
 # Handle /var/run -> /run symlink on PHP_IMAGE
-if [ -L /var/run ] && [ ! -d /run/dhcpcd ]; then
-    mkdir -p /run/dhcpcd 2>&1 || sudo -n mkdir -p /run/dhcpcd 2>&1 || true
+if [ -L /var/run ]; then
+    if [ ! -d /run/dhcpcd ]; then
+        echo "[fake-root] creating /run/dhcpcd for symlink /var/run" >&2
+        mkdir -p /run/dhcpcd 2>&1 || sudo -n mkdir -p /run/dhcpcd 2>&1 || echo "[fake-root] warn: cannot create /run/dhcpcd" >&2
+    fi
+    # ensure /var/run/dhcpcd exists via symlink
+    if [ ! -d /var/run/dhcpcd ]; then
+        mkdir -p /var/run/dhcpcd 2>&1 || sudo -n mkdir -p /var/run/dhcpcd 2>&1 || echo "[fake-root] warn: cannot create /var/run/dhcpcd" >&2
+    fi
 fi
 if [ ! -d /root/opnsense-tweaks ]; then
-    mkdir -p /root/opnsense-tweaks 2>&1 || sudo -n mkdir -p /root/opnsense-tweaks 2>&1 || echo "[fake-root] warn: host /root not writable, will skip bind" >&2
+    mkdir -p /root/opnsense-tweaks 2>&1 || sudo -n mkdir -p /root/opnsense-tweaks 2>&1 || echo "[fake-root] warn: host /root not writable (550, idmapped), will skip bind" >&2
 fi
+echo "[fake-root] host mount points ready: $(ls -ld /var/run/dhcpcd /var/db/dhcpcd /conf /usr/local/etc 2>&1 | tr '\n' ';')" >&2
 
 # Execute in private mount namespace with bind mounts (user+mount ns via -r avoids privileged runner)
 # shellcheck disable=SC2016
