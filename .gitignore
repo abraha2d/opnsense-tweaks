@@ -15,7 +15,6 @@ coverage-*.php
 /coverage-html/
 
 # Build
-/fakeroot.so
 .dhcpcarp_peer
 
 # Tools

@@ -5,7 +5,6 @@ variables:
   COMPOSER_ALLOW_SUPERUSER: "1"
   GIT_SUBMODULE_STRATEGY: recursive
   PHP_IMAGE: "thecodingmachine/php:8.5-v5-cli@sha256:42215b1a124696a0c5050e68401eb20e168e511d21830f4dfcf1c096beafdb10"
-  GCC_IMAGE: "gcc:14.2.0-bookworm@sha256:b99b86a28812b1e6453a231a947dc43d76fe192788a12f344a9b568bf9f5d24c"
 
 default:
   interruptible: true
@@ -62,22 +61,6 @@ analyse:phpstan:
     - php --version
     - vendor/bin/phpstan analyse --memory-limit=1G
 
-build:fakeroot:
-  stage: test
-  image: $GCC_IMAGE
-  needs: []
-  script:
-    - gcc --version
-    - gcc -shared -fPIC -o fakeroot.so -ldl tools/fakeroot.c
-    - ls -lh fakeroot.so
-    - file fakeroot.so
-    - ldd fakeroot.so || true
-  artifacts:
-    when: always
-    expire_in: 1 week
-    paths:
-      - fakeroot.so
-
 pest:unit:
   <<: *pest_base
   stage: test
@@ -96,20 +79,12 @@ pest:unit:
 pest:integration:
   <<: *pest_base
   stage: test
-  needs:
-    - job: build:fakeroot
-      artifacts: true
+  needs: []
   before_script:
-    - ls -lh fakeroot.so || (echo "fakeroot.so artifact missing from build:fakeroot" && exit 1)
-    - cp fakeroot.so /tmp/fakeroot.so
-    - chmod 755 /tmp/fakeroot.so
-    - export FAKE_ROOT=$(mktemp -d)
-    - mkdir -p "$FAKE_ROOT/var/run/dhcpcd" "$FAKE_ROOT/var/db/dhcpcd" "$FAKE_ROOT/conf" "$FAKE_ROOT/usr/local/etc" "$FAKE_ROOT/root/opnsense-tweaks"
-    - echo "FAKE_ROOT=$FAKE_ROOT LD_PRELOAD=/tmp/fakeroot.so"
     - !reference [.pest_base, before_script]
   script:
     - php --version
-    - LD_PRELOAD=/tmp/fakeroot.so FAKE_ROOT="$FAKE_ROOT" ./vendor/bin/pest --testsuite=Integration --colors=always --ci --log-junit=junit-integration.xml --coverage-php=coverage-integration.cov
+    - tools/fake-root.sh ./vendor/bin/pest --testsuite=Integration --colors=always --ci --log-junit=junit-integration.xml --coverage-php=coverage-integration.cov
   artifacts:
     when: always
     reports:

@@ -298,9 +298,24 @@ if (!function_exists("test_reset_globals")) {
     test_reset_globals();
 }
 
-// Helpers for Integration tests via LD_PRELOAD fake root
+// Helpers for Integration tests via mount namespace fake root (tools/fake-root.sh)
 if (!function_exists('test_make_fake_root')) {
     function test_make_fake_root(?string $base = null): string {
+        // In mount namespace mode (tools/fake-root.sh), FAKE_ROOT is already set and
+        // bind-mounted to real paths. Reuse the global mount instead of creating
+        // per-test isolated roots, otherwise file_exists('/var/run/dhcpcd/...')
+        // would diverge from $base.'/var/run/dhcpcd/...'.
+        $existing = getenv('FAKE_ROOT');
+        if ($base === null && $existing !== false && $existing !== '' && is_dir($existing)) {
+            // Ensure structure exists in the global mount
+            foreach (["/var/run/dhcpcd","/var/db/dhcpcd","/conf","/usr/local/etc","/root/opnsense-tweaks"] as $p) {
+                $dir = $existing.$p;
+                @exec("mkdir -p ".escapeshellarg($dir));
+            }
+            if (!is_file($existing."/conf/config.xml")) @file_put_contents($existing."/conf/config.xml", '<opnsense><hasync><synchronizetoip/></hasync></opnsense>');
+            if (!is_file($existing."/usr/local/etc/config.xml")) @file_put_contents($existing."/usr/local/etc/config.xml", '<opnsense/>');
+            return $existing;
+        }
         $base ??= sys_get_temp_dir() . '/fake_root_' . bin2hex(random_bytes(4));
         foreach (["/var/run/dhcpcd","/var/db/dhcpcd","/conf","/usr/local/etc","/root/opnsense-tweaks"] as $p) {
             $dir = $base.$p;
@@ -312,6 +327,19 @@ if (!function_exists('test_make_fake_root')) {
         return $base;
     }
     function test_cleanup_fake_root(string $base): void {
+        // Don't delete the global mount root - it is the bind source for /conf etc.
+        $existing = getenv('FAKE_ROOT');
+        // If $base is the global mount, just clean test files, don't rm global
+        // Detect by checking if $base was the pre-existing FAKE_ROOT (no new dir created)
+        // We do this by checking if there are still other tests needing it - just skip rm
+        // for the global root; per-test cleanup is handled by individual test unlinks.
+        $global = $existing !== false ? $existing : '';
+        if ($base === $global && $global !== '') {
+            return;
+        }
+        // Also handle case where test reused global but putenv wasn't updated:
+        // if $base equals the initial global from fake-root.sh (check via FAKE_ROOT env before overwrite)
+        // The above already covers, otherwise proceed to normal cleanup
         putenv('FAKE_ROOT'); unset($_ENV['FAKE_ROOT'], $_SERVER['FAKE_ROOT']);
         $tmp = sys_get_temp_dir();
         // safety: only remove paths inside temp dir and not empty/root
