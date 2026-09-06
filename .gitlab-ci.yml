@@ -79,10 +79,11 @@ pest:unit:
 pest:integration:
   <<: *pest_base
   stage: test
+  tags: [linux, k8s-priv]
   needs: []
   script:
     - php --version
-    - tools/fake-root.sh ./vendor/bin/pest --testsuite=Integration --colors=always --ci --log-junit=junit-integration.xml --coverage-php=coverage-integration.cov
+    - sudo tools/fake-root.sh ./vendor/bin/pest --testsuite=Integration --colors=always --ci --log-junit=junit-integration.xml --coverage-php=coverage-integration.cov
   artifacts:
     when: always
     reports:
