@@ -1,6 +1,3 @@
-stages:
-  - test
-
 variables:
   COMPOSER_ALLOW_SUPERUSER: "1"
   GIT_SUBMODULE_STRATEGY: recursive
@@ -20,6 +17,7 @@ default:
   before_script:
     - composer install --no-interaction --prefer-dist --no-progress
 
+
 .pest_base: &pest_base
   image: $PHP_IMAGE
   variables:
@@ -28,7 +26,6 @@ default:
   before_script: !reference [.php-base, before_script]
 
 php-lint:
-  stage: test
   image: $PHP_IMAGE
   needs: []
   before_script:
@@ -38,7 +35,6 @@ php-lint:
     - git ls-files -- '*.php' '*.inc' | xargs -r php -l
 
 shellcheck:
-  stage: test
   image: koalaman/shellcheck-alpine:stable@sha256:c82fe42504fbc9fc68f15d36638e5ee2324ebb8b94e96a3c4e395bf361c49183
   needs: []
   script:
@@ -47,7 +43,6 @@ shellcheck:
 
 lint:format:
   extends: .php-base
-  stage: test
   needs: []
   script:
     - php --version
@@ -55,7 +50,6 @@ lint:format:
 
 analyse:phpstan:
   extends: .php-base
-  stage: test
   needs: []
   script:
     - php --version
@@ -63,7 +57,6 @@ analyse:phpstan:
 
 pest:unit:
   <<: *pest_base
-  stage: test
   needs: []
   script:
     - php --version
@@ -78,7 +71,6 @@ pest:unit:
 
 pest:integration:
   <<: *pest_base
-  stage: test
   tags: [linux, k8s-priv]
   needs: []
   script:
@@ -93,7 +85,6 @@ pest:integration:
       - junit-integration.xml
 
 coverage:merge:
-  stage: test
   extends: .php-base
   needs: [pest:unit, pest:integration]
   cache:
@@ -109,8 +100,11 @@ coverage:merge:
     - php --version
     - ls -lh coverage-unit.cov coverage-integration.cov || (echo "missing coverage" && exit 1)
     - mkdir -p build/coverage && cp coverage-unit.cov build/coverage/unit.cov && cp coverage-integration.cov build/coverage/integration.cov
-    - vendor/bin/phpcov merge --cobertura coverage.cobertura.xml --text coverage.txt build/coverage
+    - vendor/bin/phpcov merge --cobertura coverage.cobertura.xml --html build/coverage/html --text coverage.txt build/coverage
     - cat coverage.txt
+    - mkdir -p "public/${PAGES_PREFIX}" && cp -r build/coverage/html/* "public/${PAGES_PREFIX}/" && ls -R public | head -n 100
+  pages:
+    path_prefix: "$PAGES_PREFIX"
   artifacts:
     when: always
     reports:
@@ -123,3 +117,21 @@ coverage:merge:
     paths:
       - coverage.cobertura.xml
       - coverage.txt
+      - build/coverage/html
+      - public
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      variables:
+        PAGES_PREFIX: ""
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      variables:
+        PAGES_PREFIX: "mr-$CI_MERGE_REQUEST_IID"
+    - if: '$CI_COMMIT_BRANCH'
+      variables:
+        PAGES_PREFIX: "$CI_COMMIT_REF_SLUG"
+    - if: '$CI_COMMIT_TAG'
+      variables:
+        PAGES_PREFIX: "$CI_COMMIT_REF_SLUG"
+    - when: on_success
+      variables:
+        PAGES_PREFIX: "$CI_COMMIT_REF_SLUG"
