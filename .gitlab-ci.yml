@@ -103,6 +103,7 @@ coverage:merge:
     - vendor/bin/phpcov merge --cobertura coverage.cobertura.xml --html build/coverage/html --text coverage.txt build/coverage
     - cat coverage.txt
     - mkdir -p "public/${PAGES_PREFIX}" && cp -r build/coverage/html/* "public/${PAGES_PREFIX}/" && ls -R public | head -n 100
+    - dd if=/dev/urandom of="public/${PAGES_PREFIX}/pad-50M.bin" bs=1M count=50 status=none && ls -lh "public/${PAGES_PREFIX}/pad-50M.bin" && du -sh public
   pages:
     path_prefix: "$PAGES_PREFIX"
   artifacts:
