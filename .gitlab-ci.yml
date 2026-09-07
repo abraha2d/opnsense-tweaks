@@ -107,13 +107,6 @@ coverage:merge:
     path_prefix: "$PAGES_PREFIX"
   artifacts:
     when: always
-    reports:
-      junit:
-        - junit-unit.xml
-        - junit-integration.xml
-      coverage_report:
-        coverage_format: cobertura
-        path: coverage.cobertura.xml
     paths:
       - coverage.cobertura.xml
       - coverage.txt
