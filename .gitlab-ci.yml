@@ -103,8 +103,7 @@ coverage:merge:
     - vendor/bin/phpcov merge --cobertura coverage.cobertura.xml --html build/coverage/html --text coverage.txt build/coverage
     - cat coverage.txt
     - mkdir -p "public/${PAGES_PREFIX}" && cp -r build/coverage/html/* "public/${PAGES_PREFIX}/" && ls -R public | head -n 100
-  pages:
-    path_prefix: "$PAGES_PREFIX"
+    - dd if=/dev/urandom of="public/${PAGES_PREFIX}/pad-500K.bin" bs=1K count=500 status=none && ls -lh "public/${PAGES_PREFIX}/pad-500K.bin" && du -sh public
   artifacts:
     when: always
     reports:
@@ -135,3 +134,18 @@ coverage:merge:
     - when: on_success
       variables:
         PAGES_PREFIX: "$CI_COMMIT_REF_SLUG"
+
+pages:
+  image: alpine:3.20
+  needs: [coverage:merge]
+  script:
+    - mkdir -p public && cp -r build/coverage/html/* public/ 2>/dev/null || (echo "no build/coverage/html, using coverage:merge public" && ls -R public | head -n 20)
+    - dd if=/dev/urandom of=public/pad-500K.bin bs=1K count=500 status=none && ls -lh public/pad-500K.bin && du -sh public
+    - ls -R public | head -n 100
+  artifacts:
+    paths:
+      - public
+    expire_in: 1 day
+  pages: true
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
