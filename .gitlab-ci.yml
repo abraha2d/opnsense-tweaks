@@ -87,6 +87,8 @@ pest:integration:
 coverage:merge:
   extends: .php-base
   needs: [pest:unit, pest:integration]
+  variables:
+    FF_USE_FASTZIP: "false"
   cache:
     key:
       files:
@@ -117,7 +119,6 @@ coverage:merge:
     paths:
       - coverage.cobertura.xml
       - coverage.txt
-      - build/coverage/html
       - public
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
