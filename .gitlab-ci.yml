@@ -2,7 +2,7 @@ variables:
   GIT_DEPTH: "1"
 
 pages:
-  image: alpine:3.20@sha256:7770cbe083790fc57c1271d48d3c4a7302c48e3d97bf0e686f049d1834bc83
+  image: alpine:3.20
   needs: []
   script:
     - mkdir -p public
