@@ -116,9 +116,6 @@ coverage:merge:
         path: coverage.cobertura.xml
     paths:
       - coverage.cobertura.xml
-      - coverage.txt
-      - build/coverage/html
-      - public
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
       variables:
