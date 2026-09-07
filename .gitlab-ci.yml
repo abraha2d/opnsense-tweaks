@@ -1,137 +1,21 @@
 variables:
-  COMPOSER_ALLOW_SUPERUSER: "1"
-  GIT_SUBMODULE_STRATEGY: recursive
-  PHP_IMAGE: "thecodingmachine/php:8.5-v5-cli@sha256:42215b1a124696a0c5050e68401eb20e168e511d21830f4dfcf1c096beafdb10"
+  GIT_DEPTH: "1"
 
-default:
-  interruptible: true
-
-.php-base: &php-base
-  image: $PHP_IMAGE
-  cache:
-    key:
-      files:
-        - composer.lock
-    paths:
-      - vendor/
-  before_script:
-    - composer install --no-interaction --prefer-dist --no-progress
-
-
-.pest_base: &pest_base
-  image: $PHP_IMAGE
-  variables:
-    PHP_EXTENSION_PCOV: "1"
-  cache: !reference [.php-base, cache]
-  before_script: !reference [.php-base, before_script]
-
-php-lint:
-  image: $PHP_IMAGE
-  needs: []
-  before_script:
-    - git config --global --add safe.directory "$CI_PROJECT_DIR"
-  script:
-    - php --version
-    - git ls-files -- '*.php' '*.inc' | xargs -r php -l
-
-shellcheck:
-  image: koalaman/shellcheck-alpine:stable@sha256:c82fe42504fbc9fc68f15d36638e5ee2324ebb8b94e96a3c4e395bf361c49183
+pages:
+  image: alpine:3.20@sha256:7770cbe083790fc57c1271d48d3c4a7302c48e3d97bf0e686f049d1834bc83
   needs: []
   script:
-    - shellcheck --version
-    - find . \( -path ./external -prune -o -path ./vendor -prune -o -path ./.git -prune \) -o -type f -exec grep -l '^#!/.*sh' {} \; | xargs -r shellcheck
-
-lint:format:
-  extends: .php-base
-  needs: []
-  script:
-    - php --version
-    - vendor/bin/pint --test
-
-analyse:phpstan:
-  extends: .php-base
-  needs: []
-  script:
-    - php --version
-    - vendor/bin/phpstan analyse --memory-limit=1G
-
-pest:unit:
-  <<: *pest_base
-  needs: []
-  script:
-    - php --version
-    - ./vendor/bin/pest --testsuite=Unit --colors=always --ci --log-junit=junit-unit.xml --coverage-php=coverage-unit.cov
+    - mkdir -p public
+    - printf '%s\n' '<!doctype html><html><head><meta charset="utf-8"><title>EPC mimic 50M</title></head><body><h1>epc-mimic</h1></body></html>' > public/index.html
+    - for i in $(seq 1 400); do dd if=/dev/urandom of="public/2022-09-$(printf %02d $((i%30+1)))T$(printf %02d $((i%24))):00:00.html" bs=128K count=1 status=none; done
+    - ls -lh public/index.html | head
+    - echo "Publishing $(find public -type f | wc -l) files $(du -sh public | cut -f1)"
+    - ls public | head -20
   artifacts:
-    when: always
-    reports:
-      junit: junit-unit.xml
     paths:
-      - coverage-unit.cov
-      - junit-unit.xml
-
-pest:integration:
-  <<: *pest_base
-  tags: [linux, k8s-priv]
-  needs: []
-  script:
-    - php --version
-    - sudo tools/fake-root.sh ./vendor/bin/pest --testsuite=Integration --colors=always --ci --log-junit=junit-integration.xml --coverage-php=coverage-integration.cov
-  artifacts:
-    when: always
-    reports:
-      junit: junit-integration.xml
-    paths:
-      - coverage-integration.cov
-      - junit-integration.xml
-
-coverage:merge:
-  extends: .php-base
-  needs: [pest:unit, pest:integration]
-  cache:
-    key:
-      files:
-        - composer.lock
-    paths:
-      - vendor/
-    policy: pull
-  coverage: '/Total:\s*\d+\.\d+\s*%/'
-  before_script: !reference [.php-base, before_script]
-  script:
-    - php --version
-    - ls -lh coverage-unit.cov coverage-integration.cov || (echo "missing coverage" && exit 1)
-    - mkdir -p build/coverage && cp coverage-unit.cov build/coverage/unit.cov && cp coverage-integration.cov build/coverage/integration.cov
-    - vendor/bin/phpcov merge --cobertura coverage.cobertura.xml --html build/coverage/html --text coverage.txt build/coverage
-    - cat coverage.txt
-    - mkdir -p "public/${PAGES_PREFIX}" && cp -r build/coverage/html/* "public/${PAGES_PREFIX}/" && ls -R public | head -n 100
-  pages:
-    path_prefix: "$PAGES_PREFIX"
-  artifacts:
-    when: always
-    reports:
-      junit:
-        - junit-unit.xml
-        - junit-integration.xml
-      coverage_report:
-        coverage_format: cobertura
-        path: coverage.cobertura.xml
-    paths:
-      - coverage.cobertura.xml
-      - coverage.txt
-      - build/coverage/html
       - public
+    expire_in: 1 day
+  pages: true
   rules:
-    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
-      variables:
-        PAGES_PREFIX: ""
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-      variables:
-        PAGES_PREFIX: "mr-$CI_MERGE_REQUEST_IID"
-    - if: '$CI_COMMIT_BRANCH'
-      variables:
-        PAGES_PREFIX: "$CI_COMMIT_REF_SLUG"
-    - if: '$CI_COMMIT_TAG'
-      variables:
-        PAGES_PREFIX: "$CI_COMMIT_REF_SLUG"
-    - when: on_success
-      variables:
-        PAGES_PREFIX: "$CI_COMMIT_REF_SLUG"
+    - if: '$CI_COMMIT_BRANCH == "test/epc-mimic"'
+    - when: never
